@@ -203,7 +203,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   resetObject: () => {
-    const { selectedObjectType, activePresetId } = get();
+    const { selectedObjectType, activePresetId, componentOverrides } = get();
     const module = objectRegistry[selectedObjectType];
     if (!module) return;
 
@@ -213,6 +213,12 @@ export const useStore = create<AppState>((set, get) => ({
         set({
           currentParams: { ...preset.params },
           warningMessages: {},
+          selectedComponentIds: [],
+          activeReferenceComponentId: null,
+          componentOverrides: {
+            ...componentOverrides,
+            [selectedObjectType]: {},
+          },
         });
         return;
       }
@@ -222,6 +228,12 @@ export const useStore = create<AppState>((set, get) => ({
       currentParams: { ...module.defaultParams },
       activePresetId: null,
       warningMessages: {},
+      selectedComponentIds: [],
+      activeReferenceComponentId: null,
+      componentOverrides: {
+        ...componentOverrides,
+        [selectedObjectType]: {},
+      },
     });
   },
 
