@@ -77,11 +77,27 @@ export const useStore = create<AppState>((set, get) => ({
     const newParams = { ...currentParams, [paramId]: value };
     const clampedParams = module.constraints(newParams);
 
-    // Track clamped fields to display floating warning tooltips
-    const warnings: Record<string, string> = { ...get().warningMessages };
-    if (clampedParams[paramId] !== value) {
-      warnings[paramId] = `Value clamped to ${clampedParams[paramId]} due to geometry constraints`;
-    }
+    // Track clamped/adjusted fields to show warnings (Section 20 / REQ-VALID-003)
+    const warnings: Record<string, string> = {};
+    
+    // Check all keys in the schema to identify both direct clamping and reactive/dependent clamping
+    module.paramSchema.forEach((param) => {
+      const id = param.id;
+      const prevVal = currentParams[id];
+      const clampedVal = clampedParams[id];
+
+      if (id === paramId) {
+        // Direct clamping on the edited field
+        if (clampedVal !== value) {
+          warnings[id] = `Clamped to ${clampedVal}${param.unit ? ' ' + param.unit : ''} (limit reached)`;
+        }
+      } else {
+        // Reactive/dependent clamping on other fields
+        if (clampedVal !== prevVal) {
+          warnings[id] = `Auto-adjusted to ${clampedVal}${param.unit ? ' ' + param.unit : ''} by constraint`;
+        }
+      }
+    });
 
     set({
       currentParams: clampedParams,
