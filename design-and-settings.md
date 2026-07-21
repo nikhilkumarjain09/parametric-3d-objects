@@ -394,3 +394,44 @@ Use this checklist to review any implementation pass against this design system.
 - [ ] Responsive drawer behavior (Section 16) verified at each breakpoint; drawers overlay rather than reflow the viewport.
 - [ ] Dark-mode contrast ratios meet the accessibility minimums stated in `requirements.md` Section 25 across text, icons, and control borders.
 - [ ] No emoji, mixed icon libraries, or decorative illustrative icons appear anywhere in functional UI chrome.
+
+---
+
+## 19. Amendment — Energetic & Comprehensive UI Direction
+
+**Status:** Visual-direction amendment, applied after initial implementation. This section extends, and where noted overrides, the restrained baseline in Sections 1–18. It does **not** change layout structure, control types, or any functional behavior (`requirements.md` REQ-VISUAL-UPD-001/002) — it changes how rich, alive, and information-dense the existing structure feels.
+
+### 19.1 Intent
+
+The baseline system in Sections 1–18 intentionally erred toward flat and restrained, to avoid "SaaS dashboard" and "cyberpunk" pitfalls named in the source brief. In practice this can read as inert or under-designed. This amendment keeps every structural rule (surface hierarchy, panel layout, control types, one-accent-color rule, no oversized radii) but asks for more visual energy and more visible information within that same structure — think "flagship CAD/creative-tool marketing page" energy applied to a working tool, not "toy app" energy.
+
+### 19.2 What "Energetic" Means Here
+
+- **Accent usage is expanded, not multiplied.** Still exactly one accent hue (per Section 9.4), but it is allowed to appear more often and more confidently: a soft accent-tinted glow/gradient wash behind the Select Object control, an animated accent-colored progress sweep on the slider fill (not just a static fill), a gentle pulse on the validation-OK status dot when it changes state.
+- **Motion is a first-class design element, not an afterthought.** Section transitions (Section 12.6), camera framing (Section 6.5), selection outline changes (Section 6.3/13), and preset application should all use deliberate, snappy easing (150–300ms, ease-out) rather than instant state changes. Motion should feel confident and quick, never slow or decorative-for-its-own-sake.
+- **Depth through layered gradients, used sparingly and only on large background regions.** The Viewport background (Section 6.1) and the Toolbar may use a very subtle multi-stop dark gradient (e.g., a soft radial vignette or a top-to-bottom luminance gradient) instead of a flat fill, to add depth without violating the "avoid excessive gradients" rule — the rule against gradients in the original brief was aimed at card/button chrome, not large ambient background fields; this amendment scopes it accordingly.
+- **Micro-interactions on every primary control:** buttons get a subtle scale/brightness response on press; sliders get a soft accent glow around the thumb while dragging; the Object Selector's trigger gets a brief accent-colored highlight sweep when an object type is switched, so the switch feels like an event, not a silent state mutation.
+
+### 19.3 What "Comprehensive" Means Here
+
+- **Richer Status Bar.** Beyond the MVP contents (Section 8), add: a live parameter-count readout ("14 parameters"), a small inline sparkline or bar showing how far current dimensions sit within their valid range (per parameter group, on hover), and a compact material/finish chip showing the active material's swatch inline, not just as text.
+- **Richer material selector (Section 12.5).** Each material thumbnail becomes a small live-rendered preview sphere (already required in baseline) plus a one-line descriptor ("Warm, low-gloss hardwood") beneath it, so the panel reads as a genuine material library rather than a plain dropdown replacement.
+- **A compact "Object Summary" card** docked at the top of the Inspector, above the Preset selector: object icon, name, a tiny live-updating thumbnail or bounding-box diagram, and 2–3 key headline dimensions (e.g., "1200 × 750 × 720 mm") in monospace, giving an at-a-glance comprehensive summary before the user scrolls into individual sections.
+- **Hierarchy row density with light metadata.** Each Hierarchy row (Section 5) may show a small trailing dimension or count badge where relevant (e.g., "Legs (4)"), so the tree communicates more than just names.
+- **Toolbar viewport-tool cluster gains grouped visual framing** (a subtly bordered/segmented group container per cluster — Select/Frame/Reset in one group, Grid/Wireframe/BBox in another) rather than a flat row of icons, making the toolbar read as organized and comprehensive rather than a simple icon strip.
+
+### 19.4 Guardrails (do not regress the baseline)
+
+- Still exactly one accent hue; "energetic" must not become "add more colors."
+- Still no oversized rounded corners, no drop shadows on panels themselves (only floating elements, plus the newly permitted large-region background gradients).
+- Still no emoji, no decorative illustrative icons — richness comes from real data (thumbnails, live previews, metadata), not ornamentation.
+- Motion must never block interaction — all animations are visual polish layered on top of already-responsive controls, never a delay gating the user's next action.
+- All new elements (Object Summary card, richer Status Bar, material descriptors) must degrade gracefully at the responsive breakpoints in Section 16 (e.g., the Object Summary card's thumbnail can be dropped first on narrow layouts, before removing the headline dimensions).
+
+### 19.5 Additional Consistency Checklist Items (append to Section 18)
+
+- [ ] The accent hue still appears exactly once as a hue across the app (no second brand color introduced under the guise of "energy").
+- [ ] All new motion (slider drag glow, section transitions, object-switch highlight sweep, camera framing) uses the 150–300ms ease-out convention and never delays the user's next input.
+- [ ] The Viewport and Toolbar background gradients (if implemented) remain subtle enough that text/icon contrast ratios (Section 25 of `requirements.md`) still pass.
+- [ ] The Object Summary card, richer Status Bar, and material descriptors all degrade gracefully rather than breaking layout at 1024px and 768px breakpoints.
+- [ ] No card, button, or input anywhere uses a gradient — gradients are confined to large ambient background regions only (Viewport, Toolbar), per Section 19.2.

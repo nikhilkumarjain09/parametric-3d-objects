@@ -43,6 +43,7 @@ export const chairModule: ObjectDefinitionModule = {
     legThickness: 35,
     legShape: 'Square',
     legAngle: 4, // Splay angle in degrees (REQ-CHAIR-C03)
+    legInset: 15,
     armrestsEnabled: false,
     armrestHeight: 200,
     armrestLength: 350,
@@ -202,6 +203,17 @@ export const chairModule: ObjectDefinitionModule = {
       step: 0.5,
       defaultValue: 4,
     },
+    {
+      id: 'legInset',
+      label: 'Leg Inset',
+      type: 'number',
+      section: 'Legs',
+      unit: 'mm',
+      min: 5,
+      max: 60,
+      step: 1,
+      defaultValue: 15,
+    },
     // Armrests
     {
       id: 'armrestsEnabled',
@@ -289,6 +301,8 @@ export const chairModule: ObjectDefinitionModule = {
     // 3. Clamp legs splay and thickness
     const legThickness = Math.max(20, Math.min(80, Number(params.legThickness ?? 35)));
     const legAngle = Math.max(0, Math.min(12, Number(params.legAngle ?? 4))); // REQ-CHAIR-C03
+    const maxLegInset = 0.35 * Math.min(seatWidth / 2, seatDepth / 2);
+    const legInset = Math.max(5, Math.min(Math.min(60, maxLegInset), Number(params.legInset ?? 15)));
 
     // 4. Clamp armrest parameters (armrest length capped at seat depth)
     const armrestsEnabled = !!params.armrestsEnabled;
@@ -315,6 +329,7 @@ export const chairModule: ObjectDefinitionModule = {
       backrestAngle,
       legThickness,
       legAngle,
+      legInset,
       armrestsEnabled,
       armrestHeight,
       armrestLength,
@@ -328,6 +343,7 @@ export const chairModule: ObjectDefinitionModule = {
       'seatWidth', 'seatDepth', 'seatThickness', 'seatHeight', 'seatShape',
       'seatCornerRadius', 'backrestWidth', 'backrestHeight', 'backrestThickness',
       'backrestAngle', 'backrestShape', 'legThickness', 'legShape', 'legAngle',
+      'legInset',
       'armrestsEnabled', 'armrestHeight', 'armrestLength', 'armrestThickness',
       'material', 'color', 'finish'
     ];
@@ -341,6 +357,7 @@ export const chairModule: ObjectDefinitionModule = {
     const sd = (params.seatDepth ?? 450) / 1000;
     const st = (params.seatThickness ?? 40) / 1000;
     const sh = (params.seatHeight ?? 450) / 1000;
+    const legInsetM = (params.legInset ?? 15) / 1000;
     const scr = (params.seatCornerRadius ?? 20) / 1000;
 
     const bw = (params.backrestWidth ?? 400) / 1000;
@@ -423,7 +440,7 @@ export const chairModule: ObjectDefinitionModule = {
           options: { depth: st, bevelEnabled: false },
         },
         material: matProps,
-        position: [0, sh, 0],
+        position: [0, sh - st, 0], // Recompute Y position to seat underside (REQ-CHAIR-FIX-001)
         rotation: [-Math.PI / 2, 0, 0],
       });
     }
@@ -432,9 +449,10 @@ export const chairModule: ObjectDefinitionModule = {
     const seatBottomH = sh - st;
     // Calculate leg length adjusted for splay tilt to preserve seat bottom height
     const legLength = seatBottomH / (Math.cos(lAngleRad) * Math.cos(lAngleRad));
-    const legHalfW = lt / 2;
-    const posX = sw / 2 - legHalfW;
-    const posZ = sd / 2 - legHalfW;
+    const legHalfThickness = lt / 2;
+    const legHalfW = legHalfThickness;
+    const posX = sw / 2 - legInsetM - legHalfThickness; // Recompute attachment point using Leg Inset (REQ-CHAIR-FIX-002)
+    const posZ = sd / 2 - legInsetM - legHalfThickness; // Recompute attachment point using Leg Inset (REQ-CHAIR-FIX-002)
 
     // We define leg mesh details, using parent rotations to pivot from connection points (seat corners)
     const legPlacements: { id: string; name: string; pos: [number, number, number]; rot: [number, number, number] }[] = [
@@ -719,6 +737,7 @@ export const chairModule: ObjectDefinitionModule = {
         legThickness: 30,
         legShape: 'Square',
         legAngle: 2,
+        legInset: 15,
         armrestsEnabled: false,
         armrestHeight: 200,
         armrestLength: 320,
@@ -746,6 +765,7 @@ export const chairModule: ObjectDefinitionModule = {
         legThickness: 35,
         legShape: 'Tapered',
         legAngle: 3,
+        legInset: 15,
         armrestsEnabled: false,
         armrestHeight: 200,
         armrestLength: 350,
@@ -773,6 +793,7 @@ export const chairModule: ObjectDefinitionModule = {
         legThickness: 30,
         legShape: 'Round',
         legAngle: 6, // High splay for stool stability
+        legInset: 10,
         armrestsEnabled: false,
         armrestHeight: 200,
         armrestLength: 300,
@@ -800,6 +821,7 @@ export const chairModule: ObjectDefinitionModule = {
         legThickness: 45,
         legShape: 'Round',
         legAngle: 5,
+        legInset: 20,
         armrestsEnabled: true,
         armrestHeight: 220,
         armrestLength: 460,

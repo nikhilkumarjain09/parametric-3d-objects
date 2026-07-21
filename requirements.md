@@ -464,6 +464,26 @@ MVP includes, in priority order (matches Section 30 of the source brief):
 | ASM-017 | Reference hardware is a mid-range 2021+ laptop, integrated GPU, 60Hz display. |
 | ASM-018 | Bespoke per-object Inspector controls are allowed as a documented escape hatch if schema-driven rendering cannot express a control, but must remain the exception. |
 
+## 33a. Amendments Log — Post-Implementation Fixes
+
+This section records corrections discovered after initial implementation. Amendments supersede the original section they reference; the original sections are left intact above for historical traceability, but the rules below are authoritative where they conflict.
+
+### 33a.1 Chair Leg Attachment Fix (supersedes parts of Section 9.2 / REQ-CHAIR-001)
+
+**Problem observed:** In the initial implementation, chair legs are positioned too far from the seat frame — there is a visible gap between the top of each leg and the underside of the seat at the point where they should structurally join, so the chair reads as visually "floating" or disconnected at the seat/leg joint.
+
+- **REQ-CHAIR-FIX-001 (critical)**: The top face of every leg (front-left, front-right, rear-left, rear-right) must be positioned so it exactly touches the underside (bottom face) of the seat, with zero vertical gap and zero overlap/clipping. Leg top Y position is always derived as `Seat Height − Seat Thickness` (the seat's bottom surface), never as an independently offset value.
+- **REQ-CHAIR-FIX-002 (critical)**: Leg X/Z attachment points (where the leg meets the seat) must be derived directly from the seat's actual bounds, not from an arbitrary/independent position. Each leg's attachment point is the corresponding seat corner, pulled inward by a single **Leg Inset** amount: `attachmentX = ±(SeatWidth/2 − LegInset − legHalfThickness)`, `attachmentZ = ±(SeatDepth/2 − LegInset − legHalfThickness)`. This mirrors the Table leg derivation pattern (REQ-TABLE-003) and must use the same inset-from-edge approach so the leg visually reads as directly supporting the seat corner above it, not offset toward the seat's center or beyond its edge.
+- **REQ-CHAIR-FIX-003**: Default Leg Inset is small and consistent — `ASM-022`: default 15mm, editable range `[5mm, 60mm]`, clamped so legs never move inward far enough to look structurally implausible (a visual gap between the leg's outer edge and the seat's outer edge greater than ~35% of seat half-width/half-depth is disallowed).
+- **REQ-CHAIR-FIX-004**: If Leg Angle (splay, Section 9.1) is nonzero, the splay must pivot from the leg's floor contact point (per existing ASM-005), while the **top** of the leg remains anchored at the seat-corner attachment point defined above — i.e., splaying must never pull the leg's top end away from the seat. Only the leg's bottom/floor end moves outward as angle increases.
+- **REQ-CHAIR-FIX-005**: This fix applies identically regardless of Seat Shape (Square/Rounded/Waterfall) — the attachment point is always computed from the seat's rectangular bounding footprint (Width × Depth), not from the visual/rounded silhouette, so rounded/waterfall seats do not need special-cased leg logic.
+- **Acceptance criteria (AC-CHAIR-FIX-01)**: Given any valid Seat Width/Depth/Thickness/Height and any Leg Inset within range, when the chair is rendered and inspected from a side/orthographic angle, the top of each leg must be flush with the seat's underside with no visible gap and no visible clipping, at every valid parameter combination including minimum and maximum Seat dimensions and full Leg Angle range.
+
+## 33b. Amendments Log — Visual Direction Update
+
+- **REQ-VISUAL-UPD-001**: The application's visual language is extended per `design-and-settings.md` Section 19 ("Energetic & Comprehensive UI Direction") to feel more visually engaging and information-rich, while preserving every structural/functional requirement in Sections 1–33 above (panel layout, control types, validation behavior, extensibility architecture are all unchanged — this is a visual/presentation-layer update only, not a functional rework).
+- **REQ-VISUAL-UPD-002**: No functional requirement, parameter schema, derivation rule, or constraint defined elsewhere in this document is altered by the visual direction update. If an implementer believes a visual change requires a functional change, that must be flagged rather than silently implemented.
+
 ## 33. Definition of Done Checklist
 
 - [ ] All four launch object types (Table, Chair, Cup, Mug) generate geometry strictly through their Object Definition Module's `deriveGeometry(params)` function — no shell-level conditional geometry code.
