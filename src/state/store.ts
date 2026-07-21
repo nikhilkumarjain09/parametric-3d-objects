@@ -25,7 +25,7 @@ interface AppState {
 
 export const useStore = create<AppState>((set, get) => ({
   selectedObjectType: 'table',
-  currentParams: {},
+  currentParams: { ...objectRegistry['table'].defaultParams },
   selectionScope: { type: 'object', id: 'table' },
   activePresetId: null,
   warningMessages: {},

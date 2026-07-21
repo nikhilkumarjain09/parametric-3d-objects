@@ -4,14 +4,79 @@ export const tableModule: ObjectDefinitionModule = {
   id: 'table',
   label: 'Table',
   icon: 'table-2',
-  defaultParams: {},
-  paramSchema: [],
-  constraints: (params) => params,
+  defaultParams: {
+    width: 1200,
+    height: 750,
+    depth: 800,
+  },
+  paramSchema: [
+    {
+      id: 'width',
+      label: 'Width',
+      type: 'number',
+      section: 'Dimensions',
+      unit: 'mm',
+      min: 600,
+      max: 2400,
+      step: 10,
+      defaultValue: 1200,
+    },
+    {
+      id: 'height',
+      label: 'Height',
+      type: 'number',
+      section: 'Dimensions',
+      unit: 'mm',
+      min: 400,
+      max: 1200,
+      step: 10,
+      defaultValue: 750,
+    },
+    {
+      id: 'depth',
+      label: 'Depth',
+      type: 'number',
+      section: 'Dimensions',
+      unit: 'mm',
+      min: 600,
+      max: 1600,
+      step: 10,
+      defaultValue: 800,
+    },
+  ],
+  constraints: (params) => {
+    return {
+      width: Math.max(600, Math.min(2400, Number(params.width ?? 1200))),
+      height: Math.max(400, Math.min(1200, Number(params.height ?? 750))),
+      depth: Math.max(600, Math.min(1600, Number(params.depth ?? 800))),
+    };
+  },
   deriveGeometry: () => [],
   hierarchy: () => ({
     id: 'table',
     label: 'Table',
     icon: 'table-2',
   }),
-  presets: [],
+  presets: [
+    {
+      id: 'standard_table',
+      label: 'Standard Table',
+      params: { width: 1200, height: 750, depth: 800 },
+    },
+    {
+      id: 'dining_table',
+      label: 'Dining Table',
+      params: { width: 1600, height: 750, depth: 900 },
+    },
+    {
+      id: 'coffee_table',
+      label: 'Coffee Table',
+      params: { width: 1000, height: 450, depth: 600 },
+    },
+    {
+      id: 'round_table',
+      label: 'Round Table',
+      params: { width: 1000, height: 750, depth: 1000 },
+    },
+  ],
 };
