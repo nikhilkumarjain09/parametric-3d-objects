@@ -67,6 +67,19 @@ export default function Viewport() {
               />
             )}
             
+            {mesh.geometry.type === 'tube' && (
+              <tubeGeometry 
+                key={mesh.id + '-' + (mesh.geometry.pathId ?? 'tube-path')} 
+                args={[
+                  mesh.geometry.path, 
+                  mesh.geometry.segments ?? 64, 
+                  mesh.geometry.radius ?? 0.006, 
+                  mesh.geometry.radialSegments ?? 8, 
+                  false
+                ]} 
+              />
+            )}
+            
             <meshStandardMaterial
               color={mesh.material.color || '#ffffff'}
               roughness={mesh.material.roughness ?? 0.5}
