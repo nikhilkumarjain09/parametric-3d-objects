@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { ObjectDefinitionModule, GeneratedMesh, HierarchyNode } from '../types';
 
+// Memoization cache variables (Section 25)
+let lastTableParams: any = null;
+let lastTableMeshes: GeneratedMesh[] = [];
+
 // Helper function to resolve realistic PBR material properties (Section 6.2 / 12.5)
 const getMaterialProps = (material: string, color: string) => {
   switch (material) {
@@ -251,6 +255,17 @@ export const tableModule: ObjectDefinitionModule = {
   },
 
   deriveGeometry: (params) => {
+    // Memoize geometry recomputation (Section 25)
+    const cacheKeys = [
+      'width', 'height', 'depth', 'shape', 'thickness', 'cornerRadius',
+      'edgeStyle', 'configuration', 'legShape', 'legWidth', 'inset',
+      'taperRatio', 'material', 'color', 'finish'
+    ];
+    const hasChanged = !lastTableParams || cacheKeys.some(k => lastTableParams[k] !== params[k]);
+    if (!hasChanged) {
+      return lastTableMeshes;
+    }
+
     // Convert mm dimensions to meters for standard WebGL/Three.js coordinates
     const w = (params.width ?? 1200) / 1000;
     const h = (params.height ?? 750) / 1000;
@@ -457,6 +472,8 @@ export const tableModule: ObjectDefinitionModule = {
       });
     }
 
+    lastTableParams = { ...params };
+    lastTableMeshes = meshes;
     return meshes;
   },
 

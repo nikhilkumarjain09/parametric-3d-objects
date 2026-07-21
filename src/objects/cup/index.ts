@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { ObjectDefinitionModule, GeneratedMesh, HierarchyNode } from '../types';
 
+// Memoization cache variables (Section 25)
+let lastCupParams: any = null;
+let lastCupMeshes: GeneratedMesh[] = [];
+
 // Helper function to resolve realistic PBR material properties (Section 6.2)
 const getMaterialProps = (material: string, color: string) => {
   switch (material) {
@@ -163,6 +167,16 @@ export const cupModule: ObjectDefinitionModule = {
   },
 
   deriveGeometry: (params) => {
+    // Memoize geometry recomputation (Section 25)
+    const cacheKeys = [
+      'height', 'topDiameter', 'bottomDiameter', 'wallThickness', 'shape',
+      'baseThickness', 'rimStyle', 'material', 'color', 'finish'
+    ];
+    const hasChanged = !lastCupParams || cacheKeys.some(k => lastCupParams[k] !== params[k]);
+    if (!hasChanged) {
+      return lastCupMeshes;
+    }
+
     // Convert mm to meters for WebGL coordinates
     const h = (params.height ?? 100) / 1000;
     const rTop = (params.topDiameter ?? 80) / 2000;
@@ -236,7 +250,7 @@ export const cupModule: ObjectDefinitionModule = {
     // 6. Bottom inner cavity center
     points.push(new THREE.Vector2(0, tBase));
 
-    return [
+    const meshes: GeneratedMesh[] = [
       {
         id: 'cup_body',
         name: 'Cup Body',
@@ -249,6 +263,10 @@ export const cupModule: ObjectDefinitionModule = {
         position: [0, 0, 0],
       },
     ];
+
+    lastCupParams = { ...params };
+    lastCupMeshes = meshes;
+    return meshes;
   },
 
   hierarchy: () => {

@@ -579,12 +579,21 @@ function ToggleField({ param, value, onChange }: ToggleFieldProps) {
     onChange(!value);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      handleToggle();
+    }
+  };
+
   return (
     <div 
       onClick={handleToggle}
-      className="flex items-center justify-between w-full h-[32px] cursor-pointer hover:bg-surface-2/40 px-1 rounded-sm transition-colors"
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      className="flex items-center justify-between w-full h-[32px] cursor-pointer hover:bg-surface-2/40 px-1.5 rounded-sm transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
     >
-      <span className="text-size-secondary text-text-secondary font-medium select-none">
+      <span className="text-size-secondary text-text-secondary font-medium select-none focus:outline-none">
         {param.label}
       </span>
 

@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { ObjectDefinitionModule, GeneratedMesh, HierarchyNode } from '../types';
 
+// Memoization cache variables (Section 25)
+let lastChairParams: any = null;
+let lastChairMeshes: GeneratedMesh[] = [];
+
 // Helper function to resolve realistic PBR material properties (Section 6.2)
 const getMaterialProps = (material: string, color: string) => {
   switch (material) {
@@ -319,6 +323,19 @@ export const chairModule: ObjectDefinitionModule = {
   },
 
   deriveGeometry: (params) => {
+    // Memoize geometry recomputation (Section 25)
+    const cacheKeys = [
+      'seatWidth', 'seatDepth', 'seatThickness', 'seatHeight', 'seatShape',
+      'seatCornerRadius', 'backrestWidth', 'backrestHeight', 'backrestThickness',
+      'backrestAngle', 'backrestShape', 'legThickness', 'legShape', 'legAngle',
+      'armrestsEnabled', 'armrestHeight', 'armrestLength', 'armrestThickness',
+      'material', 'color', 'finish'
+    ];
+    const hasChanged = !lastChairParams || cacheKeys.some(k => lastChairParams[k] !== params[k]);
+    if (!hasChanged) {
+      return lastChairMeshes;
+    }
+
     // Conversions to meters
     const sw = (params.seatWidth ?? 450) / 1000;
     const sd = (params.seatDepth ?? 450) / 1000;
@@ -612,6 +629,8 @@ export const chairModule: ObjectDefinitionModule = {
       });
     }
 
+    lastChairParams = { ...params };
+    lastChairMeshes = meshes;
     return meshes;
   },
 

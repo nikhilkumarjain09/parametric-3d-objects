@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { ObjectDefinitionModule, GeneratedMesh, HierarchyNode } from '../types';
 
+// Memoization cache variables (Section 25)
+let lastMugParams: any = null;
+let lastMugMeshes: GeneratedMesh[] = [];
+
 // Helper function to resolve realistic PBR material properties (Section 6.2)
 const getMaterialProps = (material: string, color: string) => {
   switch (material) {
@@ -209,6 +213,17 @@ export const mugModule: ObjectDefinitionModule = {
   },
 
   deriveGeometry: (params) => {
+    // Memoize geometry recomputation (Section 25)
+    const cacheKeys = [
+      'height', 'diameter', 'wallThickness', 'shape', 'baseThickness',
+      'rimStyle', 'handleSize', 'handleThickness', 'handleShape',
+      'handlePosition', 'material', 'color', 'finish'
+    ];
+    const hasChanged = !lastMugParams || cacheKeys.some(k => lastMugParams[k] !== params[k]);
+    if (!hasChanged) {
+      return lastMugMeshes;
+    }
+
     // mm to meters conversion
     const h = (params.height ?? 95) / 1000;
     const rOuter = (params.diameter ?? 90) / 2000;
@@ -357,6 +372,8 @@ export const mugModule: ObjectDefinitionModule = {
       position: [0, 0, 0],
     });
 
+    lastMugParams = { ...params };
+    lastMugMeshes = meshes;
     return meshes;
   },
 

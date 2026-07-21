@@ -29,9 +29,21 @@ const iconMap: Record<string, React.ComponentType<any>> = {
 
 export default function Hierarchy() {
   const selectedObjectType = useStore((state) => state.selectedObjectType);
-  const currentParams = useStore((state) => state.currentParams);
   const selectionScope = useStore((state) => state.selectionScope);
   const setSelection = useStore((state) => state.setSelection);
+
+  // Subscribe only to structural parameters to prevent hierarchy re-renders on slider edits (Section 25)
+  const configuration = useStore((state) => state.currentParams.configuration);
+  const backrestShape = useStore((state) => state.currentParams.backrestShape);
+  const armrestsEnabled = useStore((state) => state.currentParams.armrestsEnabled);
+  const seatShape = useStore((state) => state.currentParams.seatShape);
+
+  const currentParams = {
+    configuration,
+    backrestShape,
+    armrestsEnabled,
+    seatShape,
+  };
 
   const activeModule = objectRegistry[selectedObjectType];
 
