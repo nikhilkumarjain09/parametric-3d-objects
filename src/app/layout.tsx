@@ -21,6 +21,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Parametric 3D Object Generator',
   description: 'Procedurally generate mathematically accurate 3D models of common objects with real-time parameters.',
+  icons: {
+    icon: '/parametric-icon.png',
+    shortcut: '/parametric-icon.png',
+    apple: '/parametric-icon.png',
+  }
 };
 
 export default function RootLayout({

@@ -251,10 +251,10 @@ export default function Toolbar() {
         {/* Brand */}
         <div className="flex items-center gap-1.5">
           <div
-            className="w-6 h-6 rounded flex items-center justify-center shrink-0"
+            className="w-6 h-6 rounded flex items-center justify-center shrink-0 overflow-hidden"
             style={{ background: 'var(--grad-primary)', boxShadow: '0 0 10px rgba(139,92,246,0.4)' }}
           >
-            <Box className="w-3.5 h-3.5 text-white" />
+            <img src="/parametric-icon.png" alt="Logo" className="w-full h-full object-cover" />
           </div>
           <span
             className="text-[13px] font-bold tracking-tight hidden sm:block"
