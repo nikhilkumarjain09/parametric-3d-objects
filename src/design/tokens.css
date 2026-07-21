@@ -1,0 +1,91 @@
+/* Design Tokens - System-wide variables */
+
+:root {
+  /* Background / Surface Hierarchy (Dark theme only) */
+  --bg-app: #090a0f;
+  --surface-0: #0f111a;
+  --surface-1: #151824;
+  --surface-2: #1e2234;
+  --surface-3: #272c43;
+  --bg-viewport: #050609;
+
+  /* Accent & Semantic Colors */
+  --accent: #0d9488;         /* Restrained teal-600 */
+  --accent-hover: #0f766e;   /* Teal-700 */
+  --accent-light: #115e59;   /* Teal-800 */
+  --accent-muted: rgba(13, 148, 136, 0.15);
+  
+  --success: #10b981;        /* Emerald-500 validation-OK status */
+  --warning: #f59e0b;        /* Amber-500 auto-clamped/warnings */
+  --error: #ef4444;          /* Red-500 hard failures */
+
+  /* Borders (1px) */
+  --border-subtle: #1f2438;  /* Panel/section dividers */
+  --border-default: #2d3450; /* Inputs/controls resting state */
+  --border-strong: #404a72;  /* Focus/hover or toolbar bottom */
+  --border-accent: #0d9488;  /* Selected state */
+
+  /* Text Hierarchy */
+  --text-primary: #f8fafc;   /* Primary labels, values, headings (Slate-50) */
+  --text-secondary: #cbd5e1; /* Section labels, helper text, units (Slate-300) */
+  --text-tertiary: #64748b;  /* Disabled text, placeholders, header labels (Slate-500) */
+  --text-accent: #2dd4bf;    /* Teal-400 active-state text */
+  --text-on-accent: #ffffff; /* White text on accent backgrounds */
+
+  /* Border Radius */
+  --radius-sm: 4px;          /* Inputs, compact buttons, dropdowns */
+  --radius-md: 6px;          /* Floating menus, popovers, tooltips, dialogs */
+
+  /* Font Sizes */
+  --font-size-micro: 11px;
+  --font-size-secondary: 12px;
+  --font-size-body: 13px;
+  --font-size-header: 15px;
+  --font-size-title: 18px;
+}
+
+@theme {
+  /* Color Palette overrides / additions */
+  --color-app: var(--bg-app);
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-viewport: var(--bg-viewport);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-light: var(--accent-light);
+  --color-accent-muted: var(--accent-muted);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-border-accent: var(--border-accent);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-accent: var(--text-accent);
+  --color-text-on-accent: var(--text-on-accent);
+
+  /* Border Radii */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+
+  /* Font Sizes */
+  --font-size-micro: var(--font-size-micro);
+  --font-size-secondary: var(--font-size-secondary);
+  --font-size-body: var(--font-size-body);
+  --font-size-header: var(--font-size-header);
+  --font-size-title: var(--font-size-title);
+  
+  /* Layout Sizing */
+  --spacing-toolbar: 56px;
+  --spacing-statusbar: 36px;
+  --spacing-left-panel: 280px;
+  --spacing-right-panel: 340px;
+}
