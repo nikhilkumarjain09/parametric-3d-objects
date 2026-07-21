@@ -74,3 +74,65 @@ Compile and build the static pages optimized for production:
 npm run build
 npm run start
 ```
+
+## Algorithms & Geometry
+
+Each object type generates geometry entirely from its parameters. Changing a dimension recalculates the affected components — no uniform object scaling is used.
+
+### Table
+
+Parametric dimension calculation with coordinate-based component placement.
+
+- Leg height derived directly from overall height and tabletop thickness:
+  `legHeight = tableHeight - tabletopThickness`
+- Corner leg positions calculated from width, depth, inset, and leg size:
+  `x = ±(width / 2 - inset - legWidth / 2)`
+  `z = ±(depth / 2 - inset - legWidth / 2)`
+- Tapered legs use a circumscribed-radius cylinder (`radialSegments = 4`) with top and bottom radii computed from `legWidth` and `taperRatio`.
+- Round and oval tabletops use `THREE.Shape.absarc` / `absellipse`; rectangular tops with corner radius use arc-connected line segments.
+- Tabletop extruded on `+Z`, then rotated `−π/2` on X so it lies flat on the ground plane.
+
+### Chair
+
+Parametric component positioning with trigonometric splay and pivot-based backrest rotation.
+
+- Leg length adjusted to keep the seat level regardless of splay angle:
+  `legLength = seatBottomHeight / (cos(angle) × cos(angle))`
+- Splay rotation is applied per-leg using rotation matrices, computing each leg's world-space center from its attachment corner and the tilted offset vector.
+- Backrest rotation is around a pivot at the rear seat top edge `[0, seatHeight, seatDepth / 2]`, not around the world origin. World position is derived from the local offset rotated by `backrestAngle`.
+- Overall height back-solved from seat height and the vertical projection of the backrest:
+  `height = seatHeight + backrestHeight × cos(backrestAngle)`
+- Waterfall seat uses a `quadraticCurveTo` profile extruded along the width axis.
+
+### Cup
+
+Surface of revolution (lathe geometry) for a hollow vessel.
+
+- A 2D profile of `THREE.Vector2` points traces the outer wall, rim, and inner wall in one closed loop.
+- `THREE.LatheGeometry` revolves this profile 360° around the Y-axis using 36 radial segments.
+- Outer wall radius at any height `y` is interpolated between `bottomRadius` and `topRadius`; body shape (Straight / Tapered / Rounded) selects linear, power-curve, or sine-modulated interpolation.
+- Inner wall radius derived by subtracting wall thickness from the outer radius at each sample:
+  `innerRadius(y) = outerRadius(y) − wallThickness`
+- Profile closes at the base `(0, baseThickness)` and the rim, producing a genuinely hollow vessel with a solid base.
+
+### Mug
+
+Identical hollow-vessel lathe body as the Cup, plus a cubic Bézier curve-swept tube handle.
+
+- Body uses the same `THREE.LatheGeometry` approach as the Cup.
+- Handle anchor points (`aTop`, `aBot`) are computed from the body radius at the vertical attach positions, so the handle stays flush with the surface when dimensions change.
+- Handle bow distance (`bow`) is proportional to handle size to maintain clearance:
+  `bow = max(15mm, handleSize × 0.6)`
+- Default and D-shape handles use `THREE.CubicBezierCurve3`; Angular handle uses a `THREE.CurvePath` of `LineCurve3` segments.
+- Handle cross-section is a circle with radius `handleThickness / 2`, swept along the path using `THREE.TubeGeometry` (40 path segments, 12 radial segments).
+- Handle position can be shifted vertically with `handlePosition`; the center Y is clamped so both anchors remain within the mug height.
+
+### Shared Techniques
+
+- **Constraint clamping** — `clamp(value, min, max)` applied to all parameters in `constraints()` before geometry is generated.
+- **Linear interpolation** — used for outer-wall profile sampling: `r(y) = rBot + (rTop − rBot) × t`.
+- **3D transformations** — each mesh specifies `position` and `rotation` in local space; the viewport applies component-level overrides on top.
+- **Bounding box** — `THREE.Box3` used for camera framing on component selection.
+- **Raycasting** — `THREE.Raycaster` used for clicking 3D components in the viewport.
+
+> See [`ALGORITHMS.md`](./ALGORITHMS.md) for a concise reference of the geometry and mathematical techniques used by each object generator.
