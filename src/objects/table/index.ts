@@ -351,15 +351,17 @@ export const tableModule: ObjectDefinitionModule = {
 
     if (params.configuration === 'Pedestal') {
       // Circular column + base plate (ASM-003)
+      // ASSUMPTION: Support column height is adjusted to legH - 0.02 and offset to start at y=0.02 so it sits perfectly flush on top of the 20mm base plate without overlapping.
+      const columnH = Math.max(0.01, legH - 0.02);
       meshes.push({
         id: 'support_column',
         name: 'Support Column',
         geometry: {
           type: 'cylinder',
-          args: [legWidth * 0.75, legWidth * 0.75, legH, 24],
+          args: [legWidth * 0.75, legWidth * 0.75, columnH, 24],
         },
         material: matProps,
-        position: [0, legH / 2, 0],
+        position: [0, 0.02 + columnH / 2, 0],
       });
       meshes.push({
         id: 'base_plate',
@@ -373,15 +375,17 @@ export const tableModule: ObjectDefinitionModule = {
       });
     } else if (params.configuration === 'Central Support') {
       // Square column + base cross (ASM-003)
+      // ASSUMPTION: Support column height is adjusted to legH - 0.02 and offset to start at y=0.02 so it sits perfectly flush on top of the 20mm base cross elements without overlapping.
+      const columnH = Math.max(0.01, legH - 0.02);
       meshes.push({
         id: 'support_column',
         name: 'Support Column',
         geometry: {
           type: 'box',
-          args: [legWidth * 1.2, legH, legWidth * 1.2],
+          args: [legWidth * 1.2, columnH, legWidth * 1.2],
         },
         material: matProps,
-        position: [0, legH / 2, 0],
+        position: [0, 0.02 + columnH / 2, 0],
       });
       // Base plate cross elements
       meshes.push({
