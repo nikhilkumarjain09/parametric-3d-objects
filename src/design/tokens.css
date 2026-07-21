@@ -1,42 +1,59 @@
 /* Design Tokens - System-wide variables */
 
 :root {
-  /* Background / Surface Hierarchy (Dark theme only) */
-  --bg-app: #090a0f;
-  --surface-0: #0f111a;
-  --surface-1: #151824;
-  --surface-2: #1e2234;
-  --surface-3: #272c43;
-  --bg-viewport: #050609;
+  /* 
+   * 1. Background / Surface Hierarchy (Dark theme only)
+   * Derived from a single dark neutral base (HSL: 224, 12% saturation)
+   * with modest luminance increases per step (roughly 3-4% perceptual steps)
+   */
+  --bg-app: hsl(224, 12%, 6%);          /* #0d0e12 - Outermost app background */
+  --surface-0: hsl(224, 12%, 9%);       /* #14151b - Toolbar / Status Bar base */
+  --surface-1: hsl(224, 12%, 12%);      /* #1a1c24 - Panel resting background */
+  --surface-2: hsl(224, 12%, 16%);      /* #232630 - Hover / raised row / input bg */
+  --surface-3: hsl(224, 12%, 20%);      /* #2d313e - Active / pressed / popover surface */
+  --bg-viewport: hsl(224, 16%, 4%);     /* #08090c - Cool-neutral 3D viewport background */
 
-  /* Accent & Semantic Colors */
-  --accent: #0d9488;         /* Restrained teal-600 */
-  --accent-hover: #0f766e;   /* Teal-700 */
-  --accent-light: #115e59;   /* Teal-800 */
-  --accent-muted: rgba(13, 148, 136, 0.15);
+  /* 
+   * 2. Accent & Semantic Colors 
+   * Accent color is a single consistent professional teal
+   */
+  --accent: hsl(174, 84%, 38%);         /* #0d9488 - Teal-600 */
+  --accent-hover: hsl(174, 84%, 32%);   /* #0f766e - Teal-700 */
+  --accent-light: hsl(174, 84%, 25%);   /* #115e59 - Teal-800 */
+  --accent-muted: hsla(174, 84%, 38%, 0.15);
   
-  --success: #10b981;        /* Emerald-500 validation-OK status */
-  --warning: #f59e0b;        /* Amber-500 auto-clamped/warnings */
-  --error: #ef4444;          /* Red-500 hard failures */
+  --success: hsl(150, 84%, 39%);        /* Emerald-500 validation status */
+  --warning: hsl(38, 92%, 50%);         /* Amber-500 auto-clamped/warnings */
+  --error: hsl(0, 84%, 60%);            /* Red-500 hard failures */
 
-  /* Borders (1px) */
-  --border-subtle: #1f2438;  /* Panel/section dividers */
-  --border-default: #2d3450; /* Inputs/controls resting state */
-  --border-strong: #404a72;  /* Focus/hover or toolbar bottom */
-  --border-accent: #0d9488;  /* Selected state */
+  /* 
+   * 3. Borders (1px) 
+   * Formed from the same cool-neutral base
+   */
+  --border-subtle: hsl(224, 12%, 15%);  /* Panel/section dividers */
+  --border-default: hsl(224, 12%, 22%); /* Inputs/controls resting state */
+  --border-strong: hsl(224, 12%, 30%);  /* Focus/hover or toolbar bottom */
+  --border-accent: hsl(174, 84%, 38%);  /* Selected state border */
 
-  /* Text Hierarchy */
-  --text-primary: #f8fafc;   /* Primary labels, values, headings (Slate-50) */
-  --text-secondary: #cbd5e1; /* Section labels, helper text, units (Slate-300) */
-  --text-tertiary: #64748b;  /* Disabled text, placeholders, header labels (Slate-500) */
-  --text-accent: #2dd4bf;    /* Teal-400 active-state text */
-  --text-on-accent: #ffffff; /* White text on accent backgrounds */
+  /* 
+   * 4. Text Hierarchy 
+   * Formed from the same cool-neutral base for coherence
+   */
+  --text-primary: hsl(224, 10%, 95%);   /* Primary labels, values, headings (Slate-50) */
+  --text-secondary: hsl(224, 10%, 80%); /* Section labels, helper text, units (Slate-300) */
+  --text-tertiary: hsl(224, 10%, 55%);  /* Disabled text, placeholders, header labels (Slate-500) */
+  --text-accent: hsl(174, 75%, 45%);    /* Teal-400 active-state text */
+  --text-on-accent: hsl(0, 0%, 100%);   /* White text on accent backgrounds */
 
-  /* Border Radius */
-  --radius-sm: 4px;          /* Inputs, compact buttons, dropdowns */
-  --radius-md: 6px;          /* Floating menus, popovers, tooltips, dialogs */
+  /* 
+   * 5. Border Radius
+   */
+  --radius-sm: 4px;                     /* Inputs, compact buttons, dropdowns */
+  --radius-md: 6px;                     /* Floating menus, popovers, tooltips, dialogs */
 
-  /* Font Sizes */
+  /* 
+   * 6. Font Sizes (Scale from 9.8)
+   */
   --font-size-micro: 11px;
   --font-size-secondary: 12px;
   --font-size-body: 13px;
@@ -45,7 +62,7 @@
 }
 
 @theme {
-  /* Color Palette overrides / additions */
+  /* Tailwind Color Mappings */
   --color-app: var(--bg-app);
   --color-surface-0: var(--surface-0);
   --color-surface-1: var(--surface-1);
@@ -72,20 +89,24 @@
   --color-text-accent: var(--text-accent);
   --color-text-on-accent: var(--text-on-accent);
 
-  /* Border Radii */
+  /* Border Radii Mappings */
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
 
-  /* Font Sizes */
-  --font-size-micro: var(--font-size-micro);
-  --font-size-secondary: var(--font-size-secondary);
-  --font-size-body: var(--font-size-body);
-  --font-size-header: var(--font-size-header);
-  --font-size-title: var(--font-size-title);
-  
-  /* Layout Sizing */
+  /* Typography Scale Mappings */
+  --text-micro: var(--font-size-micro);
+  --text-secondary: var(--font-size-secondary);
+  --text-body: var(--font-size-body);
+  --text-header: var(--font-size-header);
+  --text-title: var(--font-size-title);
+
+  /* Sizing scale from Section 9.7 wired into Tailwind spacings */
   --spacing-toolbar: 56px;
   --spacing-statusbar: 36px;
+  --spacing-control: 32px;
+  --spacing-control-compact: 28px;
+  --spacing-hierarchy-row: 28px;
+  --spacing-section-header: 32px;
   --spacing-left-panel: 280px;
   --spacing-right-panel: 340px;
 }
