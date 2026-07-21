@@ -1,653 +1,296 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, RotateCcw, Check, Sparkles, Shuffle, Table2, Armchair, CupSoda, Coffee } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  RotateCcw,
+  Check,
+  Shuffle,
+  Table2, Armchair, CupSoda, Coffee,
+  Move, RotateCw, Maximize2,
+  AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal,
+  AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd,
+  Copy, X, Layers, Lock, Unlock, PanelRight,
+  Sparkles,
+} from 'lucide-react';
 import { useStore } from '../../state/store';
 import { objectRegistry } from '../../objects';
 
-// Helper function to map object types to Section 17 ordering
-const getSectionOrder = (type: string) => {
+// ─── Section ordering per object type ────────────────────────────────────────
+const getSectionOrder = (type: string): string[] => {
   switch (type) {
-    case 'table':
-      return ['Dimensions', 'Tabletop', 'Legs', 'Appearance'];
-    case 'chair':
-      return ['Dimensions', 'Seat', 'Backrest', 'Legs', 'Armrests', 'Appearance'];
-    case 'cup':
-      return ['Dimensions', 'Body', 'Base', 'Rim', 'Appearance'];
-    case 'mug':
-      return ['Dimensions', 'Body', 'Handle', 'Base', 'Rim', 'Appearance'];
-    default:
-      return [];
+    case 'table':  return ['Dimensions', 'Tabletop', 'Legs', 'Appearance'];
+    case 'chair':  return ['Dimensions', 'Seat', 'Backrest', 'Legs', 'Armrests', 'Appearance'];
+    case 'cup':    return ['Dimensions', 'Body', 'Base', 'Rim', 'Appearance'];
+    case 'mug':    return ['Dimensions', 'Body', 'Handle', 'Base', 'Rim', 'Appearance'];
+    default:       return [];
   }
 };
 
-// Curated palette of professional colors (Section 12.4)
+// ─── Curated swatches ─────────────────────────────────────────────────────────
 const CURATED_COLORS = [
-  '#f8fafc', // Slate White
-  '#1e293b', // Slate Dark
-  '#8b5a2b', // Natural Wood
-  '#5c4033', // Dark Walnut
-  '#cbd5e1', // Cool Silver
-  '#0d9488', // Teal accent
-  '#e11d48', // Glossy Rose
-  '#f59e0b', // Amber Gold
+  '#f8fafc', '#1e293b', '#8b5a2b', '#5c4033',
+  '#cbd5e1', '#0d9488', '#e11d48', '#f59e0b',
 ];
 
-// Sphere gradient mappings to simulate material shaders (Section 12.5)
+// ─── Material sphere gradients ────────────────────────────────────────────────
 const MATERIAL_GRADIENTS: Record<string, string> = {
   Ceramic: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #cbd5e1 60%, #94a3b8 100%)',
-  Wood: 'radial-gradient(circle at 35% 35%, #d97706 0%, #92400e 65%, #451a03 100%)',
-  Metal: 'radial-gradient(circle at 35% 35%, #f1f5f9 0%, #94a3b8 50%, #475569 100%)',
+  Wood:    'radial-gradient(circle at 35% 35%, #d97706 0%, #92400e 65%, #451a03 100%)',
+  Metal:   'radial-gradient(circle at 35% 35%, #f1f5f9 0%, #94a3b8 50%, #475569 100%)',
   Plastic: 'radial-gradient(circle at 35% 35%, #f87171 0%, #dc2626 60%, #7f1d1d 100%)',
-  Glass: 'radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.7) 0%, rgba(186, 230, 253, 0.3) 50%, rgba(56, 189, 248, 0.15) 100%)',
+  Glass:   'radial-gradient(circle at 35% 35%, rgba(255,255,255,0.7) 0%, rgba(186,230,253,0.3) 50%, rgba(56,189,248,0.15) 100%)',
+};
+const MATERIAL_LABELS: Record<string, string> = {
+  Ceramic: 'Glazed clay', Wood: 'Hardwood', Metal: 'Steel',
+  Plastic: 'Polymer', Glass: 'Silica',
 };
 
-export default function Inspector() {
-  const selectedObjectType = useStore((state) => state.selectedObjectType);
-  const currentParams = useStore((state) => state.currentParams);
-  const updateParam = useStore((state) => state.updateParam);
-  const applyPreset = useStore((state) => state.applyPreset);
-  const activePresetId = useStore((state) => state.activePresetId);
-  const warningMessages = useStore((state) => state.warningMessages);
-  const clearWarning = useStore((state) => state.clearWarning);
-  const resetObject = useStore((state) => state.resetObject);
-  const randomizeObject = useStore((state) => state.randomizeObject);
+// ─── Object icon mapping ──────────────────────────────────────────────────────
+const OBJ_ICON: Record<string, React.ComponentType<any>> = {
+  table: Table2, chair: Armchair, cup: CupSoda, mug: Coffee,
+};
 
-  const activeModule = objectRegistry[selectedObjectType];
-
-  // Local state for expanded sections (persists in current session per object type, Section 7.1)
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
-  
-  // Custom dropdown open track
-  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  
-  // Color Picker Popover
-  const [colorPickerParamId, setColorPickerParamId] = useState<string | null>(null);
-
-  const [width, setWidth] = useState<number | null>(null);
-  useEffect(() => {
-    setWidth(window.innerWidth);
-    const handleResize = () => setWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Initialize and default all sections to expanded on first load of object type (Section 7.1)
-  useEffect(() => {
-    const sections = getSectionOrder(selectedObjectType);
-    const initialExpanded: Record<string, boolean> = {};
-    sections.forEach((sec) => {
-      initialExpanded[sec] = true;
-    });
-    setExpandedSections(initialExpanded);
-    setOpenDropdownId(null);
-    setColorPickerParamId(null);
-  }, [selectedObjectType]);
-
-  if (!activeModule) return null;
-
-  const toggleSection = (section: string) => {
-    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
-  };
-
-  const sectionsList = getSectionOrder(selectedObjectType);
-
+// ─── Axis dot component ───────────────────────────────────────────────────────
+const AXIS_COLOR = { x: 'var(--axis-x)', y: 'var(--axis-y)', z: 'var(--axis-z)' };
+function AxisDot({ axis }: { axis: 'x' | 'y' | 'z' }) {
   return (
-    <aside className="w-[340px] h-full bg-surface-1 border-l border-border-subtle flex flex-col text-text-primary select-none z-10 relative">
-      {/* Inspector Header */}
-      <div className="h-8 px-4 flex items-center border-b border-border-subtle bg-surface-0 shrink-0">
-        <span className="text-size-micro font-bold tracking-wider text-text-tertiary uppercase">
-          INSPECTOR
-        </span>
-      </div>
-
-      {/* Main Parameters Scroll List */}
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6 scrollbar">
-        
-        {/* --- OBJECT SUMMARY CARD (Section 19.3) --- */}
-        <div className="bg-surface-2 border border-border-default rounded-md p-3.5 flex items-center justify-between gap-4 select-none shadow-sm relative overflow-hidden group transition-all duration-150">
-          <div className="flex flex-col gap-1 min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              {selectedObjectType === 'table' && <Table2 className="w-4 h-4 text-text-accent" />}
-              {selectedObjectType === 'chair' && <Armchair className="w-4 h-4 text-text-accent" />}
-              {selectedObjectType === 'cup' && <CupSoda className="w-4 h-4 text-text-accent" />}
-              {selectedObjectType === 'mug' && <Coffee className="w-4 h-4 text-text-accent" />}
-              <span className="font-bold text-size-body text-text-primary uppercase tracking-wide truncate">
-                {activeModule.label}
-              </span>
-            </div>
-            <div className="flex flex-col mt-1.5">
-              <span className="text-[10px] text-text-tertiary uppercase font-bold tracking-wider">
-                Headline Size
-              </span>
-              <span className="font-mono text-size-secondary text-text-secondary font-bold tracking-tight">
-                {(() => {
-                  const params = currentParams;
-                  let w = 0, h = 0, d = 0;
-                  switch (selectedObjectType) {
-                    case 'table':
-                      w = params.width ?? 1200;
-                      h = params.height ?? 750;
-                      d = (params.shape === 'Square' || params.shape === 'Round') ? w : (params.depth ?? 800);
-                      break;
-                    case 'chair':
-                      w = params.seatWidth ?? 450;
-                      h = Math.round(params.height ?? 900);
-                      d = params.seatDepth ?? 450;
-                      break;
-                    case 'cup':
-                      w = Math.max(params.topDiameter ?? 80, params.bottomDiameter ?? 60);
-                      h = params.height ?? 100;
-                      d = w;
-                      break;
-                    case 'mug':
-                      w = params.diameter ?? 90;
-                      h = params.height ?? 95;
-                      d = w;
-                      break;
-                  }
-                  return `${w} × ${h} × ${d} mm`;
-                })()}
-              </span>
-            </div>
-          </div>
-
-          {/* Isometric bounding-box SVG (Degrades/hides on small displays under 768px, Section 19.4) */}
-          {(!width || width >= 768) && (
-            <div className="w-14 h-14 shrink-0 bg-surface-3 border border-border-subtle rounded-sm flex items-center justify-center p-0.5 shadow-inner">
-              {(() => {
-                const params = currentParams;
-                let W = 100, H = 100, D = 100;
-                switch (selectedObjectType) {
-                  case 'table':
-                    W = params.width ?? 1200;
-                    H = params.height ?? 750;
-                    D = (params.shape === 'Square' || params.shape === 'Round') ? W : (params.depth ?? 800);
-                    break;
-                  case 'chair':
-                    W = params.seatWidth ?? 450;
-                    H = params.height ?? 900;
-                    D = params.seatDepth ?? 450;
-                    break;
-                  case 'cup':
-                    W = Math.max(params.topDiameter ?? 80, params.bottomDiameter ?? 60);
-                    H = params.height ?? 100;
-                    D = W;
-                    break;
-                  case 'mug':
-                    W = params.diameter ?? 90;
-                    H = params.height ?? 95;
-                    D = W;
-                    break;
-                }
-                const maxDim = Math.max(W, H, D);
-                const sw = (W / maxDim) * 16;
-                const sh = (H / maxDim) * 16;
-                const sd = (D / maxDim) * 16;
-                
-                const cx = 28;
-                const cy = 32;
-                const cos30 = 0.866;
-                const sin30 = 0.5;
-
-                const pBottom = `${cx},${cy}`;
-                const pLeft = `${cx - sw * cos30},${cy - sw * sin30}`;
-                const pRight = `${cx + sd * cos30},${cy - sd * sin30}`;
-                const pTopCenter = `${cx},${cy - sh}`;
-                const pTopLeft = `${cx - sw * cos30},${cy - sh - sw * sin30}`;
-                const pTopRight = `${cx + sd * cos30},${cy - sh - sd * sin30}`;
-                const pTopTop = `${cx - sw * cos30 + sd * cos30},${cy - sh - sw * sin30 - sd * sin30}`;
-
-                return (
-                  <svg className="w-full h-full" viewBox="0 0 56 48">
-                    {/* Left Face */}
-                    <polygon 
-                      points={`${pBottom} ${pLeft} ${pTopLeft} ${pTopCenter}`} 
-                      fill="var(--surface-1)" 
-                      stroke="var(--border-default)" 
-                      strokeWidth="0.5" 
-                    />
-                    {/* Right Face */}
-                    <polygon 
-                      points={`${pBottom} ${pRight} ${pTopRight} ${pTopCenter}`} 
-                      fill="var(--surface-0)" 
-                      stroke="var(--border-default)" 
-                      strokeWidth="0.5" 
-                    />
-                    {/* Top Face */}
-                    <polygon 
-                      points={`${pTopCenter} ${pTopLeft} ${pTopTop} ${pTopRight}`} 
-                      fill="var(--accent-muted)" 
-                      opacity="0.3"
-                      stroke="var(--accent)" 
-                      strokeWidth="0.5" 
-                    />
-                  </svg>
-                );
-              })()}
-            </div>
-          )}
-        </div>
-
-        {/* --- A. PRESET SELECTOR (Section 7.1 & 15.5) --- */}
-        {activeModule.presets && activeModule.presets.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <span className="text-size-micro font-bold text-text-tertiary uppercase tracking-wider">
-              Presets
-            </span>
-            <div className="relative">
-              <button
-                onClick={() => setOpenDropdownId(openDropdownId === 'presets' ? null : 'presets')}
-                className="w-full h-8 px-3 rounded-sm bg-surface-2 border border-border-default hover:border-border-strong text-size-body flex items-center justify-between cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
-              >
-                <span className="font-medium text-text-primary">
-                  {activePresetId 
-                    ? activeModule.presets.find(p => p.id === activePresetId)?.label 
-                    : 'Select a Preset...'}
-                </span>
-                <ChevronDown className="w-4 h-4 text-text-tertiary" />
-              </button>
-
-              {openDropdownId === 'presets' && (
-                <div className="absolute top-9 left-0 w-full bg-surface-3 border border-border-strong rounded-md shadow-2xl py-1 z-30 max-h-[200px] overflow-y-auto">
-                  {activeModule.presets.map((preset) => {
-                    const isSelected = preset.id === activePresetId;
-                    return (
-                      <div
-                        key={preset.id}
-                        onClick={() => {
-                          applyPreset(preset.id);
-                          setOpenDropdownId(null);
-                        }}
-                        className={`h-7 px-3 flex items-center justify-between text-size-secondary cursor-pointer hover:bg-surface-2 ${
-                          isSelected ? 'text-text-accent font-medium' : 'text-text-secondary'
-                        }`}
-                      >
-                        <span>{preset.label}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-text-accent" />}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            <div className="h-[1px] bg-border-subtle mt-2" />
-          </div>
-        )}
-
-        {/* --- B. SCHEMA-DRIVEN COLLAPSIBLE SECTIONS (Section 7.1) --- */}
-        {sectionsList.map((sectionName) => {
-          const isExpanded = !!expandedSections[sectionName];
-          
-          // Filter schema parameters belonging to this section
-          const sectionParams = activeModule.paramSchema.filter(
-            (param) => param.section === sectionName
-          );
-
-          // Apply conditional field visibility filtering (hide, not disable - ASM-013)
-          const visibleParams = sectionParams.filter((param) => {
-            if (param.visible) {
-              return param.visible(currentParams);
-            }
-            return true;
-          });
-
-          if (visibleParams.length === 0) return null;
-
-          return (
-            <div key={sectionName} className="flex flex-col">
-              {/* Section Collapsible Header */}
-              <button
-                onClick={() => toggleSection(sectionName)}
-                className="h-8 flex items-center justify-between bg-surface-1 border-b border-border-subtle hover:bg-surface-2 px-1 cursor-pointer transition-colors"
-              >
-                <span className="text-size-header font-bold text-text-secondary uppercase tracking-wide">
-                  {sectionName}
-                </span>
-                <ChevronDown
-                  className={`w-4 h-4 text-text-tertiary transition-transform duration-150 ${
-                    isExpanded ? '' : '-rotate-90'
-                  }`}
-                />
-              </button>
-
-              {/* Section Body with ease-out grid-row height transition (Section 19.2) */}
-              <div 
-                className={`grid transition-[grid-template-rows] duration-250 ease-out overflow-hidden ${
-                  isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-                }`}
-              >
-                <div className="min-h-0">
-                  <div className="flex flex-col gap-4 py-3 pl-1 pr-1">
-                    {visibleParams.map((param) => {
-                      const value = currentParams[param.id] ?? param.defaultValue;
-                      const hasWarning = !!warningMessages[param.id];
-
-                      return (
-                        <div key={param.id} className="flex flex-col gap-2 relative group/row">
-                          {/* 1. NUMERIC FIELD (Section 12.1) */}
-                          {param.type === 'number' && (
-                            <NumericField 
-                              param={param} 
-                              value={value} 
-                              hasWarning={hasWarning}
-                              warningMessage={warningMessages[param.id]}
-                              onClearWarning={() => clearWarning(param.id)}
-                              onChange={(val) => updateParam(param.id, val)}
-                            />
-                          )}
-
-                          {/* 2. DROPDOWN FIELD (Section 12.2) */}
-                          {param.type === 'enum' && param.id !== 'material' && (
-                            <DropdownField
-                              param={param}
-                              value={value}
-                              isOpen={openDropdownId === param.id}
-                              setOpen={(open) => setOpenDropdownId(open ? param.id : null)}
-                              onChange={(val) => updateParam(param.id, val)}
-                            />
-                          )}
-
-                          {/* 3. MATERIAL SELECTOR (Section 12.5) */}
-                          {param.id === 'material' && (
-                            <MaterialSelector
-                              param={param}
-                              value={value}
-                              onChange={(val) => updateParam(param.id, val)}
-                            />
-                          )}
-
-                          {/* 4. TOGGLE FIELD (Section 12.3) */}
-                          {param.type === 'boolean' && (
-                            <ToggleField
-                              param={param}
-                              value={value}
-                              onChange={(val) => updateParam(param.id, val)}
-                            />
-                          )}
-
-                          {/* 5. COLOR PICKER FIELD (Section 12.4) */}
-                          {param.type === 'color' && (
-                            <ColorField
-                              param={param}
-                              value={value}
-                              isOpen={colorPickerParamId === param.id}
-                              setOpen={(open) => setColorPickerParamId(open ? param.id : null)}
-                              onChange={(val) => updateParam(param.id, val)}
-                            />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-              {/* HAIRLINE DIVIDER BETWEEN SECTIONS (Section 7.2) */}
-              <div className="h-[1px] bg-border-subtle mt-2" />
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Sticky Reset/Randomize footer (Section 7.1 & 21-22) */}
-      <div className="p-4 border-t border-border-subtle bg-surface-0 shrink-0 grid grid-cols-2 gap-2">
-        <button
-          onClick={resetObject}
-          className="flex items-center justify-center gap-1.5 h-8 rounded-sm bg-surface-1 border border-border-default hover:bg-surface-2 text-size-secondary font-medium text-text-secondary hover:text-text-primary transition-all cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>Reset</span>
-        </button>
-        <button
-          onClick={randomizeObject}
-          className="flex items-center justify-center gap-1.5 h-8 rounded-sm bg-surface-1 border border-border-default hover:bg-surface-2 text-size-secondary font-medium text-text-secondary hover:text-text-primary transition-all cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent"
-        >
-          <Shuffle className="w-3.5 h-3.5" />
-          <span>Randomize</span>
-        </button>
-      </div>
-    </aside>
+    <span
+      className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+      style={{ backgroundColor: AXIS_COLOR[axis] }}
+    />
   );
 }
 
-// --- SUB-COMPONENTS FOR CONTROLS ---
-
-// 1. Numeric Field Component (Slider + Input + Reset, Section 12.1)
-interface NumericFieldProps {
-  param: any;
+// ─── Axis numeric input ───────────────────────────────────────────────────────
+interface AxisInputProps {
+  axis: 'x' | 'y' | 'z';
   value: number;
-  hasWarning: boolean;
-  warningMessage?: string;
-  onClearWarning: () => void;
-  onChange: (val: number) => void;
+  step?: number;
+  unit?: string;
+  onChange: (v: number) => void;
+}
+function AxisInput({ axis, value, step = 1, unit, onChange }: AxisInputProps) {
+  const [local, setLocal] = useState(String(Math.round(value * 1000) / 1000));
+  useEffect(() => { setLocal(String(Math.round(value * 1000) / 1000)); }, [value]);
+
+  const commit = () => {
+    const n = parseFloat(local);
+    if (!isNaN(n)) onChange(n);
+    else setLocal(String(Math.round(value * 1000) / 1000));
+  };
+
+  return (
+    <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+      <div className="flex items-center gap-1">
+        <AxisDot axis={axis} />
+        <span className="text-[9px] font-bold uppercase text-text-tertiary tracking-wider">{axis.toUpperCase()}</span>
+      </div>
+      <div className="relative flex items-center">
+        <input
+          type="number"
+          value={local}
+          step={step}
+          onChange={e => setLocal(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => { if (e.key === 'Enter') commit(); }}
+          className="w-full h-[26px] bg-surface-0 border border-border-default rounded px-1.5 pr-5 font-mono text-[11px] text-text-primary outline-none focus:border-border-accent transition-colors"
+        />
+        {unit && (
+          <span className="absolute right-1 text-[9px] text-text-tertiary font-mono pointer-events-none">{unit}</span>
+        )}
+      </div>
+    </div>
+  );
 }
 
+// ─── Section header ───────────────────────────────────────────────────────────
+function SectionHeader({ label, expanded, onToggle }: { label: string; expanded: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      className="w-full h-7 flex items-center justify-between px-3 cursor-pointer hover:bg-surface-2 transition-colors group"
+      aria-expanded={expanded}
+    >
+      <span className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary group-hover:text-text-secondary transition-colors">
+        {label}
+      </span>
+      <ChevronDown className={`w-3 h-3 text-text-tertiary transition-transform duration-150 ${expanded ? '' : '-rotate-90'}`} />
+    </button>
+  );
+}
+
+// ─── Section collapse wrapper ─────────────────────────────────────────────────
+function CollapsibleSection({ label, expanded, onToggle, children }: {
+  label: string; expanded: boolean; onToggle: () => void; children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col">
+      <div className="h-px bg-border-subtle" />
+      <SectionHeader label={label} expanded={expanded} onToggle={onToggle} />
+      <div className={`grid transition-[grid-template-rows] duration-200 ease-out overflow-hidden ${expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+        <div className="min-h-0">
+          <div className="flex flex-col gap-3 px-3 py-2.5">
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Numeric parameter field (label + slider + input row) ─────────────────────
+interface NumericFieldProps {
+  param: any; value: number; hasWarning: boolean;
+  warningMessage?: string; onClearWarning: () => void; onChange: (v: number) => void;
+}
 function NumericField({ param, value, hasWarning, warningMessage, onClearWarning, onChange }: NumericFieldProps) {
-  const [typedValue, setTypedValue] = useState(String(value));
-  const [isFlashing, setIsFlashing] = useState(false);
+  const [typedVal, setTypedVal] = useState(String(value));
+  const [flashing, setFlashing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Sync typed value if external value changes (slider drag or preset)
-  useEffect(() => {
-    setTypedValue(String(value));
-  }, [value]);
+  useEffect(() => { setTypedVal(String(value)); }, [value]);
 
-  // Flash warning effect
   useEffect(() => {
     if (hasWarning) {
-      setIsFlashing(true);
-      const timer = setTimeout(() => {
-        setIsFlashing(false);
-        onClearWarning(); // Clear warning message after timeout
-      }, 2500);
-      return () => clearTimeout(timer);
+      setFlashing(true);
+      const t = setTimeout(() => { setFlashing(false); onClearWarning(); }, 2500);
+      return () => clearTimeout(t);
     }
   }, [hasWarning]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTypedValue(e.target.value);
-  };
-
-  const handleInputBlur = () => {
-    let parsed = Number(typedValue);
-    if (isNaN(parsed)) {
-      setTypedValue(String(value));
-      return;
-    }
-
-    // Clamp on blur (Section 12.1 / REQ-CTRL-002)
+  const commit = () => {
+    const parsed = Number(typedVal);
+    if (isNaN(parsed)) { setTypedVal(String(value)); return; }
     const min = param.min ?? 0;
-    const max = param.max ?? 1000;
+    const max = param.max ?? 10000;
     const clamped = Math.max(min, Math.min(max, parsed));
-
-    if (clamped !== parsed) {
-      setIsFlashing(true);
-      setTimeout(() => setIsFlashing(false), 800);
-    }
-
+    if (clamped !== parsed) { setFlashing(true); setTimeout(() => setFlashing(false), 600); }
     onChange(clamped);
-    setTypedValue(String(clamped));
+    setTypedVal(String(clamped));
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      inputRef.current?.blur();
-    }
-  };
-
-  const handleReset = () => {
-    onChange(param.defaultValue);
-    setTypedValue(String(param.defaultValue));
-  };
+  const pct = ((value - (param.min ?? 0)) / ((param.max ?? 100) - (param.min ?? 0))) * 100;
 
   return (
-    <div className="flex flex-col gap-1.5 w-full">
-      {/* Label and Input Row */}
-      <div className="flex items-center justify-between text-size-secondary relative">
-        <label className="text-text-secondary font-medium select-none" htmlFor={`num-input-${param.id}`}>
+    <div className="flex flex-col gap-1 relative">
+      {/* Top row: label + numeric box */}
+      <div className="flex items-center justify-between">
+        <label htmlFor={`num-${param.id}`} className="text-[12px] text-text-secondary font-medium select-none">
           {param.label}
         </label>
-        
-        <div className="flex items-center gap-1.5">
-          {/* Numeric Entry Box */}
-          <div className="flex items-center bg-surface-2 border border-border-default rounded-sm px-1 h-[24px]">
+        <div className="flex items-center gap-1">
+          {/* Warning tooltip */}
+          {hasWarning && warningMessage && (
+            <span className="text-[10px] text-warning flex items-center gap-0.5 animate-fade-in">
+              <Sparkles className="w-2.5 h-2.5" />
+              {warningMessage}
+            </span>
+          )}
+          <div className="flex items-center bg-surface-0 border border-border-default rounded h-[24px] px-1.5 gap-0.5 focus-within:border-border-accent transition-colors">
             <input
               ref={inputRef}
-              id={`num-input-${param.id}`}
+              id={`num-${param.id}`}
               type="text"
-              value={typedValue}
-              onChange={handleInputChange}
-              onBlur={handleInputBlur}
-              onKeyDown={handleKeyDown}
-              className={`w-12 text-right bg-transparent text-size-secondary outline-none font-mono text-text-primary ${
-                isFlashing ? 'text-warning font-bold' : ''
-              }`}
+              value={typedVal}
+              onChange={e => setTypedVal(e.target.value)}
+              onBlur={commit}
+              onKeyDown={e => { if (e.key === 'Enter') inputRef.current?.blur(); }}
+              className={`w-12 text-right bg-transparent text-[11px] font-mono outline-none ${flashing ? 'text-warning font-bold' : 'text-text-primary'}`}
             />
             {param.unit && (
-              <span className="text-size-micro text-text-tertiary ml-0.5 select-none">
-                {param.unit}
-              </span>
+              <span className="text-[9px] text-text-tertiary font-mono">{param.unit}</span>
             )}
           </div>
-
-          {/* Reset field button (visible on hover of control row, Section 12.1) */}
+          {/* Field reset */}
           <button
-            onClick={handleReset}
-            title="Reset field to default"
-            className="w-[20px] h-[20px] flex items-center justify-center rounded-sm hover:bg-surface-3 border border-transparent hover:border-border-default text-text-tertiary hover:text-text-primary transition-all cursor-pointer"
+            onClick={() => { onChange(param.defaultValue); setTypedVal(String(param.defaultValue)); }}
+            data-tooltip="Reset to default"
+            aria-label="Reset field"
+            className="w-5 h-5 flex items-center justify-center text-text-tertiary hover:text-text-primary hover:bg-surface-2 rounded cursor-pointer transition-colors opacity-0 group-hover/row:opacity-100"
           >
-            <RotateCcw className="w-3 h-3" />
+            <RotateCcw className="w-2.5 h-2.5" />
           </button>
         </div>
       </div>
-
-      {/* Slider Track (Section 12.1) */}
-      <div className="flex items-center w-full h-[24px] px-1 relative">
-        <input
-          type="range"
-          min={param.min ?? 0}
-          max={param.max ?? 100}
-          step={param.step ?? 1}
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          className="w-full h-1 bg-surface-3 rounded-full appearance-none cursor-pointer outline-none accent-accent hover:accent-accent-hover"
-          style={{
-            background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${
-              ((value - (param.min ?? 0)) / ((param.max ?? 100) - (param.min ?? 0))) * 100
-            }%, var(--surface-3) ${
-              ((value - (param.min ?? 0)) / ((param.max ?? 100) - (param.min ?? 0))) * 100
-            }%, var(--surface-3) 100%)`,
-          }}
-        />
-      </div>
-
-      {/* Transient Warning Tooltip (Section 14 & 20.4) */}
-      {hasWarning && warningMessage && (
-        <div className="absolute top-[-26px] right-2 bg-surface-3 border border-warning rounded-sm shadow-xl px-2 py-0.5 z-40 text-size-micro text-warning flex items-center gap-1.5 transition-opacity">
-          <Sparkles className="w-3 h-3" />
-          <span>{warningMessage}</span>
-        </div>
-      )}
+      {/* Slider */}
+      <input
+        type="range"
+        min={param.min ?? 0}
+        max={param.max ?? 100}
+        step={param.step ?? 1}
+        value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        className="w-full cursor-pointer"
+        style={{
+          background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, var(--surface-3) ${pct}%, var(--surface-3) 100%)`,
+        }}
+        aria-label={param.label}
+      />
     </div>
   );
 }
 
-// 2. Dropdown Component (Section 12.2)
+// ─── Dropdown field ───────────────────────────────────────────────────────────
 interface DropdownFieldProps {
-  param: any;
-  value: string;
-  isOpen: boolean;
-  setOpen: (open: boolean) => void;
-  onChange: (val: string) => void;
+  param: any; value: string; isOpen: boolean; setOpen: (o: boolean) => void; onChange: (v: string) => void;
 }
-
 function DropdownField({ param, value, isOpen, setOpen, onChange }: DropdownFieldProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [highlightedIndex, setHighlightedIndex] = useState(0);
-  const options = param.options ?? [];
+  const ref = useRef<HTMLDivElement>(null);
+  const [hi, setHi] = useState(0);
+  const opts = param.options ?? [];
 
   useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+    if (!isOpen) return;
+    const idx = opts.indexOf(value);
+    setHi(idx >= 0 ? idx : 0);
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleOutsideClick);
-      const currentIndex = options.indexOf(value);
-      setHighlightedIndex(currentIndex >= 0 ? currentIndex : 0);
-    }
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
   }, [isOpen]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement | HTMLDivElement>) => {
-    if (!isOpen) {
-      if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        setOpen(true);
-      }
-      return;
-    }
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setHighlightedIndex((prev) => (prev + 1) % options.length);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setHighlightedIndex((prev) => (prev - 1 + options.length) % options.length);
-        break;
-      case 'Enter':
-        e.preventDefault();
-        onChange(options[highlightedIndex]);
-        setOpen(false);
-        break;
-      case 'Escape':
-      case 'Tab':
-        setOpen(false);
-        break;
-    }
-  };
-
   return (
-    <div className="flex items-center justify-between w-full h-[32px]" ref={containerRef}>
-      <span className="text-size-secondary text-text-secondary font-medium select-none w-[40%]">
-        {param.label}
-      </span>
-
-      <div className="relative w-[60%]">
+    <div className="flex items-center justify-between gap-2" ref={ref}>
+      <span className="text-[12px] text-text-secondary font-medium select-none shrink-0 w-[45%] truncate">{param.label}</span>
+      <div className="relative flex-1">
         <button
           onClick={() => setOpen(!isOpen)}
-          onKeyDown={handleKeyDown}
-          className="w-full h-8 px-3 rounded-sm bg-surface-2 border border-border-default hover:border-border-strong text-size-secondary flex items-center justify-between cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent transition-colors"
+          onKeyDown={e => {
+            if (!isOpen) {
+              if (['ArrowDown', 'Enter', ' '].includes(e.key)) { e.preventDefault(); setOpen(true); }
+              return;
+            }
+            switch (e.key) {
+              case 'ArrowDown': e.preventDefault(); setHi(p => (p + 1) % opts.length); break;
+              case 'ArrowUp':   e.preventDefault(); setHi(p => (p - 1 + opts.length) % opts.length); break;
+              case 'Enter':     e.preventDefault(); onChange(opts[hi]); setOpen(false); break;
+              case 'Escape':    setOpen(false); break;
+            }
+          }}
+          className="w-full h-7 px-2.5 rounded bg-surface-2 border border-border-default hover:border-border-strong text-[12px] flex items-center justify-between cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-accent transition-colors"
+          aria-haspopup="listbox" aria-expanded={isOpen}
         >
           <span className="text-text-primary truncate">{value}</span>
-          <ChevronDown className="w-3.5 h-3.5 text-text-tertiary" />
+          <ChevronDown className="w-3 h-3 text-text-tertiary shrink-0 ml-1" />
         </button>
-
         {isOpen && (
-          <div className="absolute top-9 left-0 w-full bg-surface-3 border border-border-strong rounded-md shadow-2xl py-1 z-35 max-h-[160px] overflow-y-auto">
-            {options.map((opt: string, index: number) => {
-              const isSelected = opt === value;
-              const isHighlighted = index === highlightedIndex;
-              return (
-                <div
-                  key={opt}
-                  onClick={() => {
-                    onChange(opt);
-                    setOpen(false);
-                  }}
-                  onMouseEnter={() => setHighlightedIndex(index)}
-                  className={`h-7 px-3 flex items-center justify-between text-size-secondary cursor-pointer ${
-                    isSelected ? 'text-text-accent font-medium' : 'text-text-secondary'
-                  } ${isHighlighted && !isSelected ? 'bg-surface-2 text-text-primary' : ''}`}
-                >
-                  <span>{opt}</span>
-                  {isSelected && <Check className="w-3.5 h-3.5 text-text-accent" />}
-                </div>
-              );
-            })}
+          <div className="absolute top-8 left-0 w-full bg-surface-3 border border-border-strong rounded shadow-lg py-0.5 z-40 max-h-[160px] overflow-y-auto animate-panel-in">
+            {opts.map((opt: string, i: number) => (
+              <div
+                key={opt} role="option" aria-selected={opt === value}
+                onClick={() => { onChange(opt); setOpen(false); }}
+                onMouseEnter={() => setHi(i)}
+                className={`h-7 px-2.5 flex items-center justify-between text-[12px] cursor-pointer transition-colors ${
+                  opt === value ? 'text-text-accent font-medium' : i === hi ? 'bg-surface-2 text-text-primary' : 'text-text-secondary hover:bg-surface-2 hover:text-text-primary'
+                }`}
+              >
+                <span>{opt}</span>
+                {opt === value && <Check className="w-3 h-3 text-text-accent shrink-0" />}
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -655,61 +298,25 @@ function DropdownField({ param, value, isOpen, setOpen, onChange }: DropdownFiel
   );
 }
 
-// 3. Material Selector Component (Rendered swatches, Section 12.5)
-interface MaterialSelectorProps {
-  param: any;
-  value: string;
-  onChange: (val: string) => void;
-}
-
-const MATERIAL_DESCRIPTORS: Record<string, string> = {
-  Ceramic: 'Glazed clay',
-  Wood: 'Warm hardwood',
-  Metal: 'Polished steel',
-  Plastic: 'Matte polymer',
-  Glass: 'Silica plate',
-};
-
-function MaterialSelector({ param, value, onChange }: MaterialSelectorProps) {
-  const options = param.options ?? [];
-
+// ─── Material selector ────────────────────────────────────────────────────────
+function MaterialSelector({ param, value, onChange }: { param: any; value: string; onChange: (v: string) => void }) {
   return (
-    <div className="flex flex-col gap-2 w-full mt-1">
-      <span className="text-size-secondary text-text-secondary font-medium select-none">
-        {param.label}
-      </span>
-      
-      {/* Horizontal grid of swatches (Section 12.5) */}
-      <div className="grid grid-cols-4 gap-2">
-        {options.map((opt: string) => {
-          const isSelected = opt === value;
-          const bgStyle = MATERIAL_GRADIENTS[opt] || 'gray';
+    <div className="flex flex-col gap-2">
+      <span className="text-[12px] text-text-secondary font-medium">{param.label}</span>
+      <div className="grid grid-cols-5 gap-1.5">
+        {(param.options ?? []).map((opt: string) => {
+          const sel = opt === value;
           return (
-            <button
-              key={opt}
-              onClick={() => onChange(opt)}
-              className="flex flex-col items-center gap-1 focus:outline-none group/swatch cursor-pointer"
+            <button key={opt} onClick={() => onChange(opt)}
+              className="flex flex-col items-center gap-1 cursor-pointer group/sw focus:outline-none"
+              aria-label={opt} aria-pressed={sel}
             >
-              {/* Sphere Gradient Preview Container */}
-              <div 
-                className={`w-11 h-11 rounded-full transition-all duration-150 relative ${
-                  isSelected 
-                    ? 'ring-2 ring-accent ring-offset-2 ring-offset-surface-1 scale-105 shadow-lg' 
-                    : 'border border-border-default hover:border-border-strong hover:scale-[1.02]'
-                }`}
-                style={{ background: bgStyle }}
+              <div
+                className={`w-10 h-10 rounded-full transition-all ${sel ? 'ring-2 ring-accent ring-offset-2 ring-offset-surface-1 scale-105' : 'border border-border-default hover:border-border-strong hover:scale-[1.04]'}`}
+                style={{ background: MATERIAL_GRADIENTS[opt] || '#888' }}
               />
-              
-              {/* Material label */}
-              <span className={`text-[10px] tracking-wide uppercase transition-colors duration-100 ${
-                isSelected ? 'text-text-accent font-bold' : 'text-text-tertiary group-hover/swatch:text-text-secondary'
-              }`}>
+              <span className={`text-[9px] uppercase tracking-wider font-medium transition-colors ${sel ? 'text-text-accent' : 'text-text-tertiary group-hover/sw:text-text-secondary'}`}>
                 {opt}
-              </span>
-
-              {/* Material descriptor (Section 19.3) */}
-              <span className="text-[10px] text-text-tertiary text-center leading-tight line-clamp-1 w-full max-w-[70px] mt-0.5 select-none font-sans normal-case">
-                {MATERIAL_DESCRIPTORS[opt] || ''}
               </span>
             </button>
           );
@@ -719,178 +326,84 @@ function MaterialSelector({ param, value, onChange }: MaterialSelectorProps) {
   );
 }
 
-// 4. Toggle Switch Component (Section 12.3)
-interface ToggleFieldProps {
-  param: any;
-  value: boolean;
-  onChange: (val: boolean) => void;
-}
-
-function ToggleField({ param, value, onChange }: ToggleFieldProps) {
-  const handleToggle = () => {
-    onChange(!value);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === ' ' || e.key === 'Enter') {
-      e.preventDefault();
-      handleToggle();
-    }
-  };
-
+// ─── Toggle field ─────────────────────────────────────────────────────────────
+function ToggleField({ param, value, onChange }: { param: any; value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <div 
-      onClick={handleToggle}
-      onKeyDown={handleKeyDown}
+    <div
+      onClick={() => onChange(!value)}
+      onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onChange(!value); } }}
       tabIndex={0}
-      className="flex items-center justify-between w-full h-[32px] cursor-pointer hover:bg-surface-2/40 px-1.5 rounded-sm transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+      role="switch" aria-checked={value}
+      className="flex items-center justify-between h-7 cursor-pointer hover:bg-surface-2 px-1 rounded transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
     >
-      <span className="text-size-secondary text-text-secondary font-medium select-none focus:outline-none">
-        {param.label}
-      </span>
-
-      {/* Switch Outer Track */}
-      <div className="relative">
-        <input
-          type="checkbox"
-          checked={value}
-          onChange={handleToggle}
-          className="sr-only"
-          id={`toggle-${param.id}`}
-        />
-        <div 
-          className={`w-9 h-5 rounded-full border transition-colors duration-150 relative ${
-            value 
-              ? 'bg-accent border-accent' 
-              : 'bg-surface-3 border-border-default'
-          }`}
-        >
-          {/* Switch Inner Thumb */}
-          <div 
-            className={`w-3.5 h-3.5 rounded-full absolute top-[2px] transition-all duration-150 ${
-              value 
-                ? 'right-[2px] bg-white translate-x-0' 
-                : 'left-[2px] bg-text-secondary translate-x-0'
-            }`}
-          />
-        </div>
+      <span className="text-[12px] text-text-secondary font-medium select-none">{param.label}</span>
+      <div className={`w-8 h-4 rounded-full border relative transition-colors ${value ? 'bg-accent border-accent' : 'bg-surface-3 border-border-default'}`}>
+        <div className={`w-3 h-3 rounded-full absolute top-[1px] transition-all ${value ? 'right-[1px] bg-white' : 'left-[1px] bg-text-tertiary'}`} />
       </div>
     </div>
   );
 }
 
-// 5. Color Swatch + Curated Popover Picker Component (Section 12.4)
-interface ColorFieldProps {
-  param: any;
-  value: string;
-  isOpen: boolean;
-  setOpen: (open: boolean) => void;
-  onChange: (val: string) => void;
-}
-
-function ColorField({ param, value, isOpen, setOpen, onChange }: ColorFieldProps) {
-  const popoverRef = useRef<HTMLDivElement>(null);
-  const [hexInput, setHexInput] = useState(value);
+// ─── Color field ──────────────────────────────────────────────────────────────
+function ColorField({ param, value, isOpen, setOpen, onChange }: {
+  param: any; value: string; isOpen: boolean; setOpen: (o: boolean) => void; onChange: (v: string) => void;
+}) {
+  const popRef = useRef<HTMLDivElement>(null);
+  const [hex, setHex] = useState(value);
+  useEffect(() => { setHex(value); }, [value]);
 
   useEffect(() => {
-    setHexInput(value);
-  }, [value]);
-
-  useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+    if (!isOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (popRef.current && !popRef.current.contains(e.target as Node)) setOpen(false);
     };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleOutsideClick);
-    }
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
   }, [isOpen]);
 
-  const handleHexSubmit = () => {
-    // Validate standard 6-digit hex codes (Section 12.4)
-    if (/^#[0-9A-Fa-f]{6}$/.test(hexInput)) {
-      onChange(hexInput);
-    } else {
-      setHexInput(value); // Reset on invalid
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleHexSubmit();
-    }
+  const submit = () => {
+    if (/^#[0-9A-Fa-f]{6}$/.test(hex)) onChange(hex);
+    else setHex(value);
   };
 
   return (
-    <div className="flex items-center justify-between w-full h-[32px] relative">
-      <span className="text-size-secondary text-text-secondary font-medium select-none">
-        {param.label}
-      </span>
-
-      {/* Trigger Swatch Button */}
+    <div className="flex items-center justify-between relative">
+      <span className="text-[12px] text-text-secondary font-medium">{param.label}</span>
       <div className="flex items-center gap-2">
-        <span className="text-size-secondary font-mono text-text-tertiary uppercase">
-          {value}
-        </span>
+        <span className="text-[10px] font-mono text-text-tertiary uppercase">{value}</span>
         <button
           onClick={() => setOpen(!isOpen)}
-          className="w-6 h-6 rounded-sm border border-border-default hover:border-border-strong transition-all focus:ring-1 focus:ring-accent cursor-pointer shadow-inner"
+          className="w-6 h-6 rounded border border-border-default hover:border-border-strong cursor-pointer shadow-inner transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
           style={{ backgroundColor: value }}
-          title="Open color swatches"
+          aria-label="Pick colour"
         />
       </div>
-
-      {/* Floating Popover Palette (Section 12.4) */}
       {isOpen && (
-        <div 
-          ref={popoverRef}
-          className="absolute right-0 top-9 w-[180px] bg-surface-3 border border-border-strong rounded-md shadow-2xl p-3 z-35 flex flex-col gap-3"
-        >
-          <span className="text-size-micro font-bold text-text-tertiary uppercase tracking-wider">
-            Curated Swatches
-          </span>
-
-          {/* Curated color grid */}
-          <div className="grid grid-cols-4 gap-2">
-            {CURATED_COLORS.map((color) => (
-              <button
-                key={color}
-                onClick={() => {
-                  onChange(color);
-                  setOpen(false);
-                }}
-                className={`w-6 h-6 rounded-sm border hover:scale-105 transition-transform cursor-pointer relative ${
-                  color === value ? 'border-accent ring-1 ring-accent' : 'border-border-default hover:border-border-strong'
-                }`}
-                style={{ backgroundColor: color }}
+        <div ref={popRef} className="absolute right-0 top-9 w-44 bg-surface-3 border border-border-strong rounded shadow-lg p-3 z-40 flex flex-col gap-3 animate-panel-in">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-text-tertiary">Swatches</span>
+          <div className="grid grid-cols-4 gap-1.5">
+            {CURATED_COLORS.map(c => (
+              <button key={c} onClick={() => { onChange(c); setOpen(false); }}
+                className={`w-6 h-6 rounded border cursor-pointer hover:scale-110 transition-transform relative ${c === value ? 'border-accent ring-1 ring-accent' : 'border-border-default'}`}
+                style={{ backgroundColor: c }}
+                aria-label={c}
               >
-                {color === value && (
-                  <Check className="w-3.5 h-3.5 absolute inset-0 m-auto text-text-on-accent drop-shadow" />
-                )}
+                {c === value && <Check className="w-3 h-3 absolute inset-0 m-auto text-white drop-shadow" />}
               </button>
             ))}
           </div>
-
-          <div className="h-[1px] bg-border-subtle" />
-
-          {/* Custom Hex input (Section 12.4) */}
+          <div className="h-px bg-border-subtle" />
           <div className="flex flex-col gap-1">
-            <span className="text-size-micro text-text-secondary font-medium">Custom Hex</span>
-            <div className="flex gap-1 h-[24px]">
+            <span className="text-[10px] text-text-secondary font-medium">Custom hex</span>
+            <div className="flex gap-1">
               <input
-                type="text"
-                value={hexInput}
-                onChange={(e) => setHexInput(e.target.value)}
-                onBlur={handleHexSubmit}
-                onKeyDown={handleKeyDown}
-                className="flex-1 px-1 bg-surface-2 border border-border-default rounded-sm text-size-secondary font-mono text-text-primary outline-none focus:border-border-strong uppercase"
+                type="text" value={hex}
+                onChange={e => setHex(e.target.value)}
+                onBlur={submit}
+                onKeyDown={e => { if (e.key === 'Enter') submit(); }}
+                className="flex-1 h-6 px-1.5 bg-surface-2 border border-border-default rounded text-[11px] font-mono text-text-primary outline-none focus:border-border-accent uppercase"
               />
-              <button
-                onClick={handleHexSubmit}
-                className="px-2 bg-surface-1 border border-border-default hover:bg-surface-2 rounded-sm text-size-micro font-medium text-text-secondary cursor-pointer"
-              >
+              <button onClick={submit} className="px-2 h-6 bg-surface-1 border border-border-default hover:bg-surface-2 rounded text-[10px] font-medium text-text-secondary cursor-pointer">
                 OK
               </button>
             </div>
@@ -898,5 +411,510 @@ function ColorField({ param, value, isOpen, setOpen, onChange }: ColorFieldProps
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Component Transform Panel (Parts mode) ───────────────────────────────────
+interface CTProps {
+  selectedObjectType: string;
+  selectedComponentIds: string[];
+  activeReferenceComponentId: string | null;
+  componentOverrides: Record<string, Record<string, any>>;
+  updateTransformOverride: (id: string, t: any) => void;
+  updateTransformOverridesBatch: (batch: Record<string, any>) => void;
+  resetComponentTransform: (id: string) => void;
+  resetAllComponentTransforms: () => void;
+  transformSpace: 'local' | 'world';
+  setTransformSpace: (s: 'local' | 'world') => void;
+  translationSnap: number; setTranslationSnap: (v: number) => void;
+  rotationSnap: number;    setRotationSnap: (v: number) => void;
+  scaleSnap: number;       setScaleSnap: (v: number) => void;
+}
+function ComponentTransformPanel(p: CTProps) {
+  const [uniformScale, setUniformScale] = useState(false);
+  const [snapOpen, setSnapOpen] = useState(false);
+
+  const objOvr = p.componentOverrides[p.selectedObjectType] || {};
+  const refId  = p.activeReferenceComponentId;
+  const refOvr = refId ? (objOvr[refId] ?? null) : null;
+
+  const pos = refOvr?.position ?? { x: 0, y: 0, z: 0 };
+  const rot = refOvr?.rotation ?? { x: 0, y: 0, z: 0 };
+  const scl = refOvr?.scale    ?? { x: 1, y: 1, z: 1 };
+
+  const setPos = (axis: 'x' | 'y' | 'z', v: number) => {
+    if (!refId) return;
+    p.updateTransformOverride(refId, { position: { ...pos, [axis]: v } });
+  };
+  const setRot = (axis: 'x' | 'y' | 'z', v: number) => {
+    if (!refId) return;
+    p.updateTransformOverride(refId, { rotation: { ...rot, [axis]: v } });
+  };
+  const setScl = (axis: 'x' | 'y' | 'z', v: number) => {
+    if (!refId) return;
+    if (uniformScale) {
+      const ratio = scl[axis] !== 0 ? v / scl[axis] : 1;
+      p.updateTransformOverride(refId, { scale: { x: scl.x * ratio, y: scl.y * ratio, z: scl.z * ratio } });
+    } else {
+      p.updateTransformOverride(refId, { scale: { ...scl, [axis]: v } });
+    }
+  };
+
+  const alignComponents = (axis: 'x' | 'y' | 'z', side: 'min' | 'center' | 'max') => {
+    if (!refId || p.selectedComponentIds.length < 2) return;
+    const refVal = (refOvr?.position ?? { x: 0, y: 0, z: 0 })[axis];
+    const batch: Record<string, any> = {};
+    p.selectedComponentIds.forEach(id => {
+      if (id === refId) return;
+      const cur = objOvr[id]?.position ?? { x: 0, y: 0, z: 0 };
+      batch[id] = { position: { ...cur, [axis]: refVal } };
+    });
+    p.updateTransformOverridesBatch(batch);
+  };
+
+  const mirrorComponent = (axis: 'x' | 'y' | 'z') => {
+    if (!refId) return;
+    const newPos = { ...pos, [axis]: -pos[axis] };
+    const newRot = { ...rot };
+    if (axis === 'x') { newRot.y = -rot.y; newRot.z = -rot.z; }
+    if (axis === 'y') { newRot.x = -rot.x; newRot.z = -rot.z; }
+    if (axis === 'z') { newRot.x = -rot.x; newRot.y = -rot.y; }
+    p.updateTransformOverride(refId, { position: newPos, rotation: newRot });
+  };
+
+  const applyToSiblings = () => {
+    if (!refId || p.selectedComponentIds.length < 2) return;
+    const batch: Record<string, any> = {};
+    p.selectedComponentIds.forEach(id => {
+      if (id === refId) return;
+      batch[id] = { position: { ...pos }, rotation: { ...rot }, scale: { ...scl } };
+    });
+    p.updateTransformOverridesBatch(batch);
+  };
+
+  const hasSelection = p.selectedComponentIds.length > 0;
+  const hasRef = !!refId;
+  const isMulti = p.selectedComponentIds.length > 1;
+
+  const SubLabel = ({ children }: { children: React.ReactNode }) => (
+    <span className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary block mb-1.5">{children}</span>
+  );
+
+  return (
+    <div className="flex flex-col flex-1 overflow-y-auto">
+      {/* Parts mode header */}
+      <div className="px-3 py-2.5 border-b border-border-subtle bg-surface-0 shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-text-accent" />
+            <span className="text-[11px] font-bold text-text-primary uppercase tracking-wide">Parts</span>
+          </div>
+          {hasSelection && (
+            <span className="text-[10px] font-medium text-text-tertiary bg-surface-2 px-1.5 py-0.5 rounded">
+              {p.selectedComponentIds.length} selected
+            </span>
+          )}
+        </div>
+        {!hasSelection && (
+          <p className="text-[11px] text-text-tertiary mt-2 leading-relaxed">
+            Click a part in the viewport or Scene panel to select it.
+          </p>
+        )}
+      </div>
+
+      {hasRef && (
+        <div className="flex flex-col flex-1 overflow-y-auto">
+          {/* Selected part identity */}
+          <div className="px-3 py-2 border-b border-border-subtle bg-accent-muted/30 shrink-0">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-text-accent font-semibold truncate">{refId}</span>
+              <button
+                onClick={() => p.resetComponentTransform(refId)}
+                data-tooltip="Reset this part's transform"
+                aria-label="Reset transform"
+                className="flex items-center gap-1 px-1.5 h-5 text-[10px] text-text-tertiary hover:text-text-primary hover:bg-surface-2 rounded cursor-pointer transition-colors"
+              >
+                <RotateCcw className="w-2.5 h-2.5" />
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-0 overflow-y-auto">
+            {/* Position */}
+            <div className="flex flex-col gap-2 px-3 py-2.5 border-b border-border-subtle">
+              <div className="flex items-center justify-between">
+                <SubLabel>Position</SubLabel>
+                <div className="flex bg-surface-2 border border-border-subtle rounded overflow-hidden">
+                  {(['local', 'world'] as const).map(s => (
+                    <button key={s} onClick={() => p.setTransformSpace(s)}
+                      className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${p.transformSpace === s ? 'bg-accent text-text-on-accent' : 'text-text-tertiary hover:text-text-primary'}`}
+                    >{s}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-1.5">
+                <AxisInput axis="x" value={pos.x} step={1} unit="mm" onChange={v => setPos('x', v)} />
+                <AxisInput axis="y" value={pos.y} step={1} unit="mm" onChange={v => setPos('y', v)} />
+                <AxisInput axis="z" value={pos.z} step={1} unit="mm" onChange={v => setPos('z', v)} />
+              </div>
+            </div>
+
+            {/* Rotation */}
+            <div className="flex flex-col gap-2 px-3 py-2.5 border-b border-border-subtle">
+              <SubLabel>Rotation</SubLabel>
+              <div className="flex gap-1.5">
+                <AxisInput axis="x" value={rot.x} step={0.5} unit="°" onChange={v => setRot('x', v)} />
+                <AxisInput axis="y" value={rot.y} step={0.5} unit="°" onChange={v => setRot('y', v)} />
+                <AxisInput axis="z" value={rot.z} step={0.5} unit="°" onChange={v => setRot('z', v)} />
+              </div>
+            </div>
+
+            {/* Scale */}
+            <div className="flex flex-col gap-2 px-3 py-2.5 border-b border-border-subtle">
+              <div className="flex items-center justify-between">
+                <SubLabel>Scale</SubLabel>
+                <button
+                  onClick={() => setUniformScale(v => !v)}
+                  data-tooltip={uniformScale ? 'Uniform scale on' : 'Uniform scale off'}
+                  aria-label="Lock uniform scale"
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-bold uppercase cursor-pointer transition-colors ${uniformScale ? 'bg-accent-muted border-accent/30 text-text-accent' : 'border-border-subtle text-text-tertiary hover:text-text-primary'}`}
+                >
+                  {uniformScale ? <Lock className="w-2.5 h-2.5" /> : <Unlock className="w-2.5 h-2.5" />}
+                  Uniform
+                </button>
+              </div>
+              <div className="flex gap-1.5">
+                <AxisInput axis="x" value={scl.x} step={0.01} onChange={v => setScl('x', v)} />
+                <AxisInput axis="y" value={scl.y} step={0.01} onChange={v => setScl('y', v)} />
+                <AxisInput axis="z" value={scl.z} step={0.01} onChange={v => setScl('z', v)} />
+              </div>
+            </div>
+
+            {/* Mirror */}
+            <div className="flex flex-col gap-2 px-3 py-2.5 border-b border-border-subtle">
+              <SubLabel>Mirror</SubLabel>
+              <div className="flex gap-1.5">
+                {(['x', 'y', 'z'] as const).map(axis => (
+                  <button key={axis} onClick={() => mirrorComponent(axis)}
+                    data-tooltip={`Mirror on ${axis.toUpperCase()}`}
+                    className="flex-1 h-7 flex items-center justify-center gap-1 rounded bg-surface-2 border border-border-default hover:bg-surface-3 hover:border-border-strong text-text-secondary hover:text-text-primary text-[10px] font-bold uppercase cursor-pointer transition-colors"
+                  >
+                    <AxisDot axis={axis} />
+                    {axis.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Multi-select alignment */}
+            {isMulti && (
+              <div className="flex flex-col gap-2 px-3 py-2.5 border-b border-border-subtle">
+                <SubLabel>Align to Reference</SubLabel>
+                <div className="flex gap-1">
+                  <button title="Align Left (X)"    onClick={() => alignComponents('x', 'min')}    className="flex-1 h-7 rounded bg-surface-2 border border-border-default hover:bg-surface-3 text-text-secondary hover:text-text-primary text-[9px] font-bold cursor-pointer transition-colors flex items-center justify-center gap-0.5"><AlignStartHorizontal    className="w-3 h-3" /><span>L</span></button>
+                  <button title="Center X"          onClick={() => alignComponents('x', 'center')} className="flex-1 h-7 rounded bg-surface-2 border border-border-default hover:bg-surface-3 text-text-secondary hover:text-text-primary text-[9px] font-bold cursor-pointer transition-colors flex items-center justify-center gap-0.5"><AlignCenterHorizontal   className="w-3 h-3" /><span>CX</span></button>
+                  <button title="Align Right (X)"   onClick={() => alignComponents('x', 'max')}    className="flex-1 h-7 rounded bg-surface-2 border border-border-default hover:bg-surface-3 text-text-secondary hover:text-text-primary text-[9px] font-bold cursor-pointer transition-colors flex items-center justify-center gap-0.5"><AlignEndHorizontal      className="w-3 h-3" /><span>R</span></button>
+                  <button title="Top (Y)"           onClick={() => alignComponents('y', 'max')}    className="flex-1 h-7 rounded bg-surface-2 border border-border-default hover:bg-surface-3 text-text-secondary hover:text-text-primary text-[9px] font-bold cursor-pointer transition-colors flex items-center justify-center gap-0.5"><AlignVerticalJustifyEnd    className="w-3 h-3" /><span>Top</span></button>
+                  <button title="Center Y"          onClick={() => alignComponents('y', 'center')} className="flex-1 h-7 rounded bg-surface-2 border border-border-default hover:bg-surface-3 text-text-secondary hover:text-text-primary text-[9px] font-bold cursor-pointer transition-colors flex items-center justify-center gap-0.5"><AlignVerticalJustifyCenter className="w-3 h-3" /><span>CY</span></button>
+                </div>
+                <button
+                  onClick={applyToSiblings}
+                  className="w-full h-7 rounded bg-surface-2 border border-border-default hover:bg-surface-3 hover:border-border-strong flex items-center justify-center gap-1.5 text-[11px] font-medium text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+                >
+                  <Copy className="w-3 h-3" />
+                  Apply transform to all selected
+                </button>
+              </div>
+            )}
+
+            {/* Snap settings (collapsible) */}
+            <div className="flex flex-col px-3 py-2 border-b border-border-subtle">
+              <button
+                onClick={() => setSnapOpen(v => !v)}
+                className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-text-tertiary cursor-pointer hover:text-text-secondary transition-colors"
+              >
+                Snap Settings
+                <ChevronDown className={`w-3 h-3 transition-transform ${snapOpen ? '' : '-rotate-90'}`} />
+              </button>
+              {snapOpen && (
+                <div className="flex gap-1.5 mt-2">
+                  <AxisInput axis="x" value={p.translationSnap} step={1} unit="mm" onChange={p.setTranslationSnap} />
+                  <AxisInput axis="y" value={p.rotationSnap}    step={0.5} unit="°" onChange={p.setRotationSnap} />
+                  <AxisInput axis="z" value={p.scaleSnap}       step={0.01}         onChange={p.setScaleSnap} />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset all transforms */}
+      {hasSelection && (
+        <div className="px-3 py-2 border-t border-border-subtle shrink-0 mt-auto">
+          <button
+            onClick={p.resetAllComponentTransforms}
+            className="w-full h-7 rounded border border-border-subtle hover:border-border-default text-text-tertiary hover:text-text-primary text-[11px] font-medium flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Reset All Transforms
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Inspector component ─────────────────────────────────────────────────
+export default function Inspector() {
+  const selectedObjectType = useStore(s => s.selectedObjectType);
+  const currentParams      = useStore(s => s.currentParams);
+  const updateParam        = useStore(s => s.updateParam);
+  const applyPreset        = useStore(s => s.applyPreset);
+  const activePresetId     = useStore(s => s.activePresetId);
+  const warningMessages    = useStore(s => s.warningMessages);
+  const clearWarning       = useStore(s => s.clearWarning);
+  const resetObject        = useStore(s => s.resetObject);
+  const randomizeObject    = useStore(s => s.randomizeObject);
+
+  const editMode                   = useStore(s => s.editMode);
+  const selectedComponentIds       = useStore(s => s.selectedComponentIds);
+  const activeReferenceComponentId = useStore(s => s.activeReferenceComponentId);
+  const componentOverrides         = useStore(s => s.componentOverrides);
+  const updateTransformOverride    = useStore(s => s.updateTransformOverride);
+  const updateTransformOverridesBatch = useStore(s => s.updateTransformOverridesBatch);
+  const resetComponentTransform    = useStore(s => s.resetComponentTransform);
+  const resetAllComponentTransforms = useStore(s => s.resetAllComponentTransforms);
+  const transformSpace             = useStore(s => s.transformSpace);
+  const setTransformSpace          = useStore(s => s.setTransformSpace);
+  const translationSnap            = useStore(s => s.translationSnap);
+  const setTranslationSnap         = useStore(s => s.setTranslationSnap);
+  const rotationSnap               = useStore(s => s.rotationSnap);
+  const setRotationSnap            = useStore(s => s.setRotationSnap);
+  const scaleSnap                  = useStore(s => s.scaleSnap);
+  const setScaleSnap               = useStore(s => s.setScaleSnap);
+
+  const activeModule   = objectRegistry[selectedObjectType];
+  const ObjIcon        = OBJ_ICON[selectedObjectType] || Table2;
+
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [openDropdownId, setOpenDropdownId]     = useState<string | null>(null);
+  const [colorPickerParamId, setColorPickerParamId] = useState<string | null>(null);
+  const [collapsed, setCollapsed]               = useState(false);
+
+  useEffect(() => {
+    const secs = getSectionOrder(selectedObjectType);
+    const init: Record<string, boolean> = {};
+    secs.forEach(s => { init[s] = true; });
+    setExpandedSections(init);
+    setOpenDropdownId(null);
+    setColorPickerParamId(null);
+  }, [selectedObjectType]);
+
+  if (!activeModule) return null;
+
+  const toggleSection = (s: string) =>
+    setExpandedSections(p => ({ ...p, [s]: !p[s] }));
+
+  const sectionsList = getSectionOrder(selectedObjectType);
+
+  // Bounding box for summary
+  const getBB = () => {
+    let w = 0, h = 0, d = 0;
+    const p = currentParams;
+    switch (selectedObjectType) {
+      case 'table': w = p.width ?? 1200; h = p.height ?? 750; d = (p.shape === 'Square' || p.shape === 'Round') ? w : (p.depth ?? 800); break;
+      case 'chair': w = p.seatWidth ?? 450; h = Math.round(p.height ?? 900); d = p.seatDepth ?? 450; break;
+      case 'cup':   w = Math.max(p.topDiameter ?? 80, p.bottomDiameter ?? 60); h = p.height ?? 100; d = w; break;
+      case 'mug':   w = p.diameter ?? 90; h = p.height ?? 95; d = w; break;
+    }
+    return { w, h, d };
+  };
+  const bb = getBB();
+
+  // Collapsed state — thin strip
+  if (collapsed) {
+    return (
+      <aside className="w-8 h-full bg-surface-1 border-l border-border-subtle flex flex-col items-center py-2 z-10 shrink-0">
+        <button
+          onClick={() => setCollapsed(false)}
+          data-tooltip="Open Inspector"
+          aria-label="Open Inspector"
+          className="w-6 h-6 flex items-center justify-center text-text-tertiary hover:text-text-primary hover:bg-surface-2 rounded cursor-pointer transition-colors"
+        >
+          <PanelRight className="w-3.5 h-3.5" />
+        </button>
+      </aside>
+    );
+  }
+
+  return (
+    <aside
+      className="flex flex-col h-full bg-surface-1 border-l border-border-subtle z-10 shrink-0"
+      style={{ width: 'var(--width-right-panel)' }}
+    >
+      {/* ── Panel header ─────────────────────────────────────────── */}
+      <div className="h-8 px-3 flex items-center justify-between border-b border-border-subtle bg-surface-0 shrink-0">
+        <div className="flex items-center gap-2">
+          <ObjIcon className="w-3.5 h-3.5 text-text-accent" />
+          <span className="text-[12px] font-semibold text-text-primary">{activeModule.label}</span>
+          <span className="text-[10px] text-text-tertiary font-mono">{bb.w}×{bb.h}×{bb.d}mm</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-text-tertiary uppercase font-bold tracking-widest">
+            {editMode === 'component' ? 'Parts' : 'Properties'}
+          </span>
+          <button
+            onClick={() => setCollapsed(true)}
+            data-tooltip="Collapse panel"
+            aria-label="Collapse Inspector"
+            className="w-5 h-5 flex items-center justify-center text-text-tertiary hover:text-text-primary hover:bg-surface-2 rounded cursor-pointer transition-colors"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* ── PARTS MODE: show ComponentTransformPanel only ─────────── */}
+      {editMode === 'component' ? (
+        <ComponentTransformPanel
+          selectedObjectType={selectedObjectType}
+          selectedComponentIds={selectedComponentIds}
+          activeReferenceComponentId={activeReferenceComponentId}
+          componentOverrides={componentOverrides}
+          updateTransformOverride={updateTransformOverride}
+          updateTransformOverridesBatch={updateTransformOverridesBatch}
+          resetComponentTransform={resetComponentTransform}
+          resetAllComponentTransforms={resetAllComponentTransforms}
+          transformSpace={transformSpace}
+          setTransformSpace={setTransformSpace}
+          translationSnap={translationSnap}
+          setTranslationSnap={setTranslationSnap}
+          rotationSnap={rotationSnap}
+          setRotationSnap={setRotationSnap}
+          scaleSnap={scaleSnap}
+          setScaleSnap={setScaleSnap}
+        />
+      ) : (
+        /* ── PROPERTIES MODE ──────────────────────────────────────── */
+        <>
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto flex flex-col">
+
+            {/* Presets row */}
+            {activeModule.presets?.length > 0 && (
+              <div className="px-3 py-2.5 border-b border-border-subtle">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary">Quick Start</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {activeModule.presets.map(preset => {
+                    const sel = preset.id === activePresetId;
+                    return (
+                      <button
+                        key={preset.id}
+                        onClick={() => applyPreset(preset.id)}
+                        className={[
+                          'px-2.5 py-1 rounded text-[11px] font-medium cursor-pointer transition-all border',
+                          sel
+                            ? 'bg-accent text-text-on-accent border-accent shadow-sm'
+                            : 'bg-surface-2 text-text-secondary border-border-default hover:border-border-strong hover:text-text-primary',
+                        ].join(' ')}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Schema-driven collapsible sections */}
+            {sectionsList.map(sectionName => {
+              const isExpanded = !!expandedSections[sectionName];
+              const sectionParams = activeModule.paramSchema.filter(p => p.section === sectionName);
+              const visibleParams = sectionParams.filter(p => (p.visible ? p.visible(currentParams) : true));
+              if (visibleParams.length === 0) return null;
+
+              return (
+                <CollapsibleSection
+                  key={sectionName}
+                  label={sectionName}
+                  expanded={isExpanded}
+                  onToggle={() => toggleSection(sectionName)}
+                >
+                  {visibleParams.map(param => {
+                    const value      = currentParams[param.id] ?? param.defaultValue;
+                    const hasWarning = !!warningMessages[param.id];
+
+                    return (
+                      <div key={param.id} className="group/row">
+                        {param.type === 'number' && (
+                          <NumericField
+                            param={param} value={value} hasWarning={hasWarning}
+                            warningMessage={warningMessages[param.id]}
+                            onClearWarning={() => clearWarning(param.id)}
+                            onChange={val => updateParam(param.id, val)}
+                          />
+                        )}
+                        {param.type === 'enum' && param.id !== 'material' && (
+                          <DropdownField
+                            param={param} value={value}
+                            isOpen={openDropdownId === param.id}
+                            setOpen={o => setOpenDropdownId(o ? param.id : null)}
+                            onChange={val => updateParam(param.id, val)}
+                          />
+                        )}
+                        {param.id === 'material' && (
+                          <MaterialSelector
+                            param={param} value={value}
+                            onChange={val => updateParam(param.id, val)}
+                          />
+                        )}
+                        {param.type === 'boolean' && (
+                          <ToggleField
+                            param={param} value={value}
+                            onChange={val => updateParam(param.id, val)}
+                          />
+                        )}
+                        {param.type === 'color' && (
+                          <ColorField
+                            param={param} value={value}
+                            isOpen={colorPickerParamId === param.id}
+                            setOpen={o => setColorPickerParamId(o ? param.id : null)}
+                            onChange={val => updateParam(param.id, val)}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </CollapsibleSection>
+              );
+            })}
+
+            {/* Bottom spacer */}
+            <div className="h-4 shrink-0" />
+          </div>
+
+          {/* Sticky footer */}
+          <div className="px-3 py-2 border-t border-border-subtle bg-surface-0 shrink-0 flex gap-2">
+            <button
+              onClick={resetObject}
+              className="flex-1 flex items-center justify-center gap-1.5 h-7 rounded bg-surface-1 border border-border-default hover:bg-surface-2 hover:border-border-strong text-[12px] font-medium text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset Changes
+            </button>
+            <button
+              onClick={randomizeObject}
+              className="flex-1 flex items-center justify-center gap-1.5 h-7 rounded bg-surface-1 border border-border-default hover:bg-surface-2 hover:border-border-strong text-[12px] font-medium text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+            >
+              <Shuffle className="w-3 h-3" />
+              Randomize
+            </button>
+          </div>
+        </>
+      )}
+    </aside>
   );
 }

@@ -25,6 +25,22 @@ interface AppState {
   inspectorDrawerOpen: boolean;
   activeMobileTab: 'hierarchy' | 'inspector';
 
+  // Transform & Alignment states (Section 5, 8, 11)
+  editMode: 'parametric' | 'component';
+  selectedComponentIds: string[];
+  activeReferenceComponentId: string | null;
+  transformMode: 'translate' | 'rotate' | 'scale';
+  transformSpace: 'local' | 'world';
+  translationSnap: number;
+  rotationSnap: number;
+  scaleSnap: number;
+  isDraggingGizmo: boolean;
+  componentOverrides: Record<string, Record<string, {
+    position: { x: number; y: number; z: number };
+    rotation: { x: number; y: number; z: number };
+    scale: { x: number; y: number; z: number };
+  }>>;
+
   // Actions
   setSelectedObjectType: (type: string) => void;
   updateParam: (paramId: string, value: any) => void;
@@ -46,6 +62,29 @@ interface AppState {
   setHierarchyDrawerOpen: (open: boolean) => void;
   setInspectorDrawerOpen: (open: boolean) => void;
   setActiveMobileTab: (tab: 'hierarchy' | 'inspector') => void;
+
+  // Transform Actions
+  setEditMode: (mode: 'parametric' | 'component') => void;
+  setSelectedComponentIds: (ids: string[]) => void;
+  setActiveReferenceComponentId: (id: string | null) => void;
+  setTransformMode: (mode: 'translate' | 'rotate' | 'scale') => void;
+  setTransformSpace: (space: 'local' | 'world') => void;
+  setTranslationSnap: (snap: number) => void;
+  setRotationSnap: (snap: number) => void;
+  setScaleSnap: (snap: number) => void;
+  setIsDraggingGizmo: (dragging: boolean) => void;
+  updateTransformOverride: (componentId: string, transform: {
+    position?: { x: number; y: number; z: number };
+    rotation?: { x: number; y: number; z: number };
+    scale?: { x: number; y: number; z: number };
+  }) => void;
+  updateTransformOverridesBatch: (batch: Record<string, {
+    position?: { x: number; y: number; z: number };
+    rotation?: { x: number; y: number; z: number };
+    scale?: { x: number; y: number; z: number };
+  }>) => void;
+  resetComponentTransform: (componentId: string) => void;
+  resetAllComponentTransforms: () => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -67,6 +106,18 @@ export const useStore = create<AppState>((set, get) => ({
   inspectorDrawerOpen: false,
   activeMobileTab: 'hierarchy',
 
+  // Default Transform & Alignment states
+  editMode: 'parametric',
+  selectedComponentIds: [],
+  activeReferenceComponentId: null,
+  transformMode: 'translate',
+  transformSpace: 'local',
+  translationSnap: 0,
+  rotationSnap: 0,
+  scaleSnap: 0,
+  isDraggingGizmo: false,
+  componentOverrides: {},
+
   setSelectedObjectType: (type) => {
     const module = objectRegistry[type];
     if (!module) return;
@@ -83,6 +134,9 @@ export const useStore = create<AppState>((set, get) => ({
       // Auto close drawers on object change for better usability
       hierarchyDrawerOpen: false,
       inspectorDrawerOpen: false,
+      editMode: 'parametric',
+      selectedComponentIds: [],
+      activeReferenceComponentId: null,
     });
   },
 
@@ -128,7 +182,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   applyPreset: (presetId) => {
-    const { selectedObjectType } = get();
+    const { selectedObjectType, componentOverrides } = get();
     const module = objectRegistry[selectedObjectType];
     if (!module) return;
 
@@ -139,6 +193,12 @@ export const useStore = create<AppState>((set, get) => ({
       currentParams: { ...preset.params },
       activePresetId: presetId,
       warningMessages: {},
+      selectedComponentIds: [],
+      activeReferenceComponentId: null,
+      componentOverrides: {
+        ...componentOverrides,
+        [selectedObjectType]: {},
+      },
     });
   },
 
@@ -260,5 +320,109 @@ export const useStore = create<AppState>((set, get) => ({
 
   setActiveMobileTab: (tab) => {
     set({ activeMobileTab: tab });
+  },
+
+  // Transform Actions implementation
+  setEditMode: (mode) => set({ editMode: mode }),
+  setSelectedComponentIds: (ids) => set({ selectedComponentIds: ids }),
+  setActiveReferenceComponentId: (id) => set({ activeReferenceComponentId: id }),
+  setTransformMode: (mode) => set({ transformMode: mode }),
+  setTransformSpace: (space) => set({ transformSpace: space }),
+  setTranslationSnap: (snap) => set({ translationSnap: snap }),
+  setRotationSnap: (snap) => set({ rotationSnap: snap }),
+  setScaleSnap: (snap) => set({ scaleSnap: snap }),
+  setIsDraggingGizmo: (dragging) => set({ isDraggingGizmo: dragging }),
+  updateTransformOverride: (componentId, transform) => {
+    const { selectedObjectType, componentOverrides } = get();
+    const currentObjOverrides = componentOverrides[selectedObjectType] || {};
+    const currentOverride = currentObjOverrides[componentId] || {
+      position: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+    };
+
+    const newOverride = {
+      position: {
+        x: transform.position?.x !== undefined ? transform.position.x : currentOverride.position.x,
+        y: transform.position?.y !== undefined ? transform.position.y : currentOverride.position.y,
+        z: transform.position?.z !== undefined ? transform.position.z : currentOverride.position.z,
+      },
+      rotation: {
+        x: transform.rotation?.x !== undefined ? transform.rotation.x : currentOverride.rotation.x,
+        y: transform.rotation?.y !== undefined ? transform.rotation.y : currentOverride.rotation.y,
+        z: transform.rotation?.z !== undefined ? transform.rotation.z : currentOverride.rotation.z,
+      },
+      scale: {
+        x: transform.scale?.x !== undefined ? transform.scale.x : currentOverride.scale.x,
+        y: transform.scale?.y !== undefined ? transform.scale.y : currentOverride.scale.y,
+        z: transform.scale?.z !== undefined ? transform.scale.z : currentOverride.scale.z,
+      },
+    };
+
+    set({
+      componentOverrides: {
+        ...componentOverrides,
+        [selectedObjectType]: {
+          ...currentObjOverrides,
+          [componentId]: newOverride,
+        },
+      },
+    });
+  },
+  updateTransformOverridesBatch: (batch) => {
+    const { selectedObjectType, componentOverrides } = get();
+    const currentObjOverrides = { ...(componentOverrides[selectedObjectType] || {}) };
+    
+    Object.entries(batch).forEach(([componentId, transform]) => {
+      const currentOverride = currentObjOverrides[componentId] || {
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0 },
+        scale: { x: 1, y: 1, z: 1 },
+      };
+      currentObjOverrides[componentId] = {
+        position: {
+          x: transform.position?.x !== undefined ? transform.position.x : currentOverride.position.x,
+          y: transform.position?.y !== undefined ? transform.position.y : currentOverride.position.y,
+          z: transform.position?.z !== undefined ? transform.position.z : currentOverride.position.z,
+        },
+        rotation: {
+          x: transform.rotation?.x !== undefined ? transform.rotation.x : currentOverride.rotation.x,
+          y: transform.rotation?.y !== undefined ? transform.rotation.y : currentOverride.rotation.y,
+          z: transform.rotation?.z !== undefined ? transform.rotation.z : currentOverride.rotation.z,
+        },
+        scale: {
+          x: transform.scale?.x !== undefined ? transform.scale.x : currentOverride.scale.x,
+          y: transform.scale?.y !== undefined ? transform.scale.y : currentOverride.scale.y,
+          z: transform.scale?.z !== undefined ? transform.scale.z : currentOverride.scale.z,
+        },
+      };
+    });
+
+    set({
+      componentOverrides: {
+        ...componentOverrides,
+        [selectedObjectType]: currentObjOverrides,
+      },
+    });
+  },
+  resetComponentTransform: (componentId) => {
+    const { selectedObjectType, componentOverrides } = get();
+    const currentObjOverrides = { ...(componentOverrides[selectedObjectType] || {}) };
+    delete currentObjOverrides[componentId];
+    set({
+      componentOverrides: {
+        ...componentOverrides,
+        [selectedObjectType]: currentObjOverrides,
+      },
+    });
+  },
+  resetAllComponentTransforms: () => {
+    const { selectedObjectType, componentOverrides } = get();
+    set({
+      componentOverrides: {
+        ...componentOverrides,
+        [selectedObjectType]: {},
+      },
+    });
   },
 }));

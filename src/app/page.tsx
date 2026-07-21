@@ -7,39 +7,38 @@ import Viewport from '../components/shell/Viewport';
 import Inspector from '../components/shell/Inspector';
 import StatusBar from '../components/shell/StatusBar';
 import { useStore } from '../state/store';
-import { FolderTree, Sliders } from 'lucide-react';
+import { Layers, Sliders } from 'lucide-react';
 
 export default function Home() {
   const [width, setWidth] = useState<number | null>(null);
 
-  const hierarchyDrawerOpen = useStore((state) => state.hierarchyDrawerOpen);
-  const inspectorDrawerOpen = useStore((state) => state.inspectorDrawerOpen);
-  const activeMobileTab = useStore((state) => state.activeMobileTab);
-
-  const setHierarchyDrawerOpen = useStore((state) => state.setHierarchyDrawerOpen);
-  const setInspectorDrawerOpen = useStore((state) => state.setInspectorDrawerOpen);
-  const setActiveMobileTab = useStore((state) => state.setActiveMobileTab);
+  const hierarchyDrawerOpen     = useStore(s => s.hierarchyDrawerOpen);
+  const inspectorDrawerOpen     = useStore(s => s.inspectorDrawerOpen);
+  const activeMobileTab         = useStore(s => s.activeMobileTab);
+  const setHierarchyDrawerOpen  = useStore(s => s.setHierarchyDrawerOpen);
+  const setInspectorDrawerOpen  = useStore(s => s.setInspectorDrawerOpen);
+  const setActiveMobileTab      = useStore(s => s.setActiveMobileTab);
 
   useEffect(() => {
     setWidth(window.innerWidth);
-    const handleResize = () => setWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const showMobileTabbed = width !== null && width < 768;
+  const showMobileTabbed  = width !== null && width < 768;
   const showOverlayDrawers = width !== null && width >= 768 && width < 1024;
   const showDesktopInline = width === null || width >= 1024;
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-app text-text-primary select-none">
-      {/* Top Toolbar (56px height) */}
+      {/* Top Command Bar */}
       <Toolbar />
 
-      {/* Main workspace layout */}
+      {/* Main workspace */}
       <div className="flex flex-1 w-full min-h-0 relative overflow-hidden">
-        
-        {/* 1. DESKTOP LAYOUT (Inline panels side-by-side) */}
+
+        {/* ── DESKTOP: panels inline ──────────────────────────────── */}
         {showDesktopInline && (
           <>
             <Hierarchy />
@@ -48,36 +47,30 @@ export default function Home() {
           </>
         )}
 
-        {/* 2. TABLET LAYOUT (Overlay Drawer layout) */}
+        {/* ── TABLET: overlay drawers ─────────────────────────────── */}
         {showOverlayDrawers && (
           <>
             <Viewport />
 
-            {/* Left Hierarchy Drawer Overlay */}
             {hierarchyDrawerOpen && (
               <>
-                {/* Backdrop Scrim */}
-                <div 
+                <div
                   onClick={() => setHierarchyDrawerOpen(false)}
-                  className="absolute inset-0 bg-black/60 z-20 transition-opacity animate-fade-in cursor-pointer"
+                  className="absolute inset-0 bg-black/60 z-20 animate-fade-in cursor-pointer"
                 />
-                {/* Left Panel Container */}
-                <div className="absolute left-0 top-0 h-full w-[280px] z-30 shadow-2xl transition-transform animate-slide-in-left">
+                <div className="absolute left-0 top-0 h-full z-30 shadow-2xl animate-slide-in-left">
                   <Hierarchy />
                 </div>
               </>
             )}
 
-            {/* Right Inspector Drawer Overlay */}
             {inspectorDrawerOpen && (
               <>
-                {/* Backdrop Scrim */}
-                <div 
+                <div
                   onClick={() => setInspectorDrawerOpen(false)}
-                  className="absolute inset-0 bg-black/60 z-20 transition-opacity animate-fade-in cursor-pointer"
+                  className="absolute inset-0 bg-black/60 z-20 animate-fade-in cursor-pointer"
                 />
-                {/* Right Panel Container */}
-                <div className="absolute right-0 top-0 h-full w-[340px] z-30 shadow-2xl transition-transform animate-slide-in-right">
+                <div className="absolute right-0 top-0 h-full z-30 shadow-2xl animate-slide-in-right">
                   <Inspector />
                 </div>
               </>
@@ -85,60 +78,49 @@ export default function Home() {
           </>
         )}
 
-        {/* 3. MOBILE LAYOUT (Shared Single Drawer with Tab Switcher) */}
+        {/* ── MOBILE: shared tabbed drawer ────────────────────────── */}
         {showMobileTabbed && (
           <>
             <Viewport />
 
-            {/* Combined Drawer Overlay */}
             {(hierarchyDrawerOpen || inspectorDrawerOpen) && (
               <>
-                {/* Backdrop Scrim */}
-                <div 
+                <div
                   onClick={() => {
                     setHierarchyDrawerOpen(false);
                     setInspectorDrawerOpen(false);
                   }}
-                  className="absolute inset-0 bg-black/60 z-20 transition-opacity animate-fade-in cursor-pointer"
+                  className="absolute inset-0 bg-black/60 z-20 animate-fade-in cursor-pointer"
                 />
-                
-                {/* Tabbed Drawer Box */}
                 <div className="absolute right-0 top-0 h-full w-[320px] bg-surface-1 z-30 shadow-2xl flex flex-col border-l border-border-subtle animate-slide-in-right">
-                  
-                  {/* Segmented Tab Switcher Header (Section 16) */}
-                  <div className="h-12 bg-surface-0 border-b border-border-subtle flex items-center p-1.5 gap-1 shrink-0 select-none">
+                  {/* Tab switcher */}
+                  <div className="h-10 bg-surface-0 border-b border-border-subtle flex items-center p-1 gap-1 shrink-0">
                     <button
                       onClick={() => setActiveMobileTab('hierarchy')}
-                      className={`flex-1 h-full rounded-sm text-size-secondary font-bold uppercase tracking-wider transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer ${
+                      className={`flex-1 h-full rounded text-[11px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
                         activeMobileTab === 'hierarchy'
-                          ? 'bg-accent text-text-on-accent shadow-sm'
+                          ? 'bg-accent text-text-on-accent'
                           : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
                       }`}
                     >
-                      <FolderTree className="w-3.5 h-3.5" />
-                      <span>Hierarchy</span>
+                      <Layers className="w-3.5 h-3.5" />
+                      Scene
                     </button>
-                    
                     <button
                       onClick={() => setActiveMobileTab('inspector')}
-                      className={`flex-1 h-full rounded-sm text-size-secondary font-bold uppercase tracking-wider transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer ${
+                      className={`flex-1 h-full rounded text-[11px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
                         activeMobileTab === 'inspector'
-                          ? 'bg-accent text-text-on-accent shadow-sm'
+                          ? 'bg-accent text-text-on-accent'
                           : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
                       }`}
                     >
                       <Sliders className="w-3.5 h-3.5" />
-                      <span>Inspector</span>
+                      Inspector
                     </button>
                   </div>
 
-                  {/* Drawer Content */}
                   <div className="flex-1 min-h-0 overflow-hidden relative flex flex-col">
-                    {activeMobileTab === 'hierarchy' ? (
-                      <Hierarchy />
-                    ) : (
-                      <Inspector />
-                    )}
+                    {activeMobileTab === 'hierarchy' ? <Hierarchy /> : <Inspector />}
                   </div>
                 </div>
               </>
@@ -147,7 +129,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* Bottom Status Bar (36px height) */}
+      {/* Status Bar */}
       <StatusBar />
     </div>
   );

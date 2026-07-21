@@ -1,36 +1,40 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Table2, 
-  Armchair, 
-  CupSoda, 
-  Coffee, 
-  ChevronDown, 
-  MousePointer2, 
-  Scan, 
-  RefreshCcw, 
-  Grid3x3, 
-  BoxSelect, 
-  Box, 
-  RotateCcw, 
+import {
+  Table2,
+  Armchair,
+  CupSoda,
+  Coffee,
+  ChevronDown,
+  Crosshair,
+  RefreshCcw,
+  Grid3x3,
+  BoxSelect,
+  RotateCcw,
   Shuffle,
   HelpCircle,
   ListTree,
-  Sliders
+  Sliders,
+  MousePointer2,
+  Move,
+  RotateCw,
+  Maximize2,
+  Box,
+  Settings2,
 } from 'lucide-react';
 import { useStore } from '../../state/store';
-import { objectList, ObjectDefinitionModule } from '../../objects';
+import { objectList } from '../../objects';
 
-// Icon mapping based on Section 10.1 of design-and-settings.md
 const iconMap: Record<string, React.ComponentType<any>> = {
-  'table-2': Table2,
-  'armchair': Armchair,
-  'cup-soda': CupSoda,
-  'coffee': Coffee,
+  'table-2':   Table2,
+  'armchair':  Armchair,
+  'cup-soda':  CupSoda,
+  'coffee':    Coffee,
+  'box':       Box,
 };
 
-interface DropdownItem {
+interface ObjectItem {
   id: string;
   label: string;
   icon: string;
@@ -38,232 +42,269 @@ interface DropdownItem {
   disabled?: boolean;
 }
 
-export default function Toolbar() {
-  const selectedObjectType = useStore((state) => state.selectedObjectType);
-  const setSelectedObjectType = useStore((state) => state.setSelectedObjectType);
-  const resetObject = useStore((state) => state.resetObject);
-  const randomizeObject = useStore((state) => state.randomizeObject);
+// Compact icon-button used throughout the toolbar
+function ToolBtn({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+  kbd,
+  danger,
+  children,
+}: {
+  icon?: React.ComponentType<any>;
+  label: string;
+  active?: boolean;
+  onClick?: () => void;
+  kbd?: string;
+  danger?: boolean;
+  children?: React.ReactNode;
+}) {
+  const tooltip = kbd ? `${label} (${kbd})` : label;
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={active}
+      data-tooltip={tooltip}
+      className={[
+        'h-7 px-2 rounded flex items-center justify-center gap-1.5 text-[12px] font-medium cursor-pointer transition-all select-none shrink-0',
+        'focus:outline-none focus-visible:ring-1 focus-visible:ring-accent',
+        active
+          ? 'bg-accent text-text-on-accent shadow-sm'
+          : danger
+            ? 'text-error hover:bg-error/10 hover:text-error'
+            : 'text-text-secondary hover:text-text-primary hover:bg-surface-2',
+      ].join(' ')}
+    >
+      {Icon && <Icon className="w-3.5 h-3.5 shrink-0" />}
+      {children}
+    </button>
+  );
+}
 
-  const hierarchyDrawerOpen = useStore((state) => state.hierarchyDrawerOpen);
-  const setHierarchyDrawerOpen = useStore((state) => state.setHierarchyDrawerOpen);
-  const inspectorDrawerOpen = useStore((state) => state.inspectorDrawerOpen);
-  const setInspectorDrawerOpen = useStore((state) => state.setInspectorDrawerOpen);
-  const setActiveMobileTab = useStore((state) => state.setActiveMobileTab);
+// Vertical divider between toolbar groups
+function Divider() {
+  return <div className="w-px h-5 bg-border-subtle shrink-0" />;
+}
+
+// Grouped pill cluster
+function ToolGroup({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-0.5 bg-surface-1 border border-border-subtle rounded px-0.5 h-8 shrink-0">
+      {children}
+    </div>
+  );
+}
+
+export default function Toolbar() {
+  const selectedObjectType      = useStore(s => s.selectedObjectType);
+  const setSelectedObjectType   = useStore(s => s.setSelectedObjectType);
+  const resetObject             = useStore(s => s.resetObject);
+  const randomizeObject         = useStore(s => s.randomizeObject);
+
+  const hierarchyDrawerOpen     = useStore(s => s.hierarchyDrawerOpen);
+  const setHierarchyDrawerOpen  = useStore(s => s.setHierarchyDrawerOpen);
+  const inspectorDrawerOpen     = useStore(s => s.inspectorDrawerOpen);
+  const setInspectorDrawerOpen  = useStore(s => s.setInspectorDrawerOpen);
+  const setActiveMobileTab      = useStore(s => s.setActiveMobileTab);
+
+  const editMode                = useStore(s => s.editMode);
+  const setEditMode             = useStore(s => s.setEditMode);
+  const transformMode           = useStore(s => s.transformMode);
+  const setTransformMode        = useStore(s => s.setTransformMode);
+  const setSelectedComponentIds = useStore(s => s.setSelectedComponentIds);
+  const setActiveRefId          = useStore(s => s.setActiveReferenceComponentId);
+  const gridEnabled             = useStore(s => s.gridEnabled);
+  const shadingMode             = useStore(s => s.shadingMode);
+  const boundingBoxEnabled      = useStore(s => s.boundingBoxEnabled);
 
   const [width, setWidth] = useState<number | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const [dropOpen, setDropOpen] = useState(false);
+  const [highlightIdx, setHighlightIdx] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef   = useRef<HTMLButtonElement>(null);
 
   const [sweepActive, setSweepActive] = useState(false);
-  const prevObjectTypeRef = useRef(selectedObjectType);
+  const prevTypeRef = useRef(selectedObjectType);
 
+  // Sweep animation on object change
   useEffect(() => {
-    if (prevObjectTypeRef.current !== selectedObjectType) {
-      prevObjectTypeRef.current = selectedObjectType;
+    if (prevTypeRef.current !== selectedObjectType) {
+      prevTypeRef.current = selectedObjectType;
       setSweepActive(true);
-      const timer = setTimeout(() => setSweepActive(false), 800);
-      return () => clearTimeout(timer);
+      const t = setTimeout(() => setSweepActive(false), 700);
+      return () => clearTimeout(t);
     }
   }, [selectedObjectType]);
 
   useEffect(() => {
     setWidth(window.innerWidth);
-    const handleResize = () => setWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const activeModule = objectList.find(o => o.id === selectedObjectType) || objectList[0];
-  const ActiveIcon = iconMap[activeModule.icon] || Table2;
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      const k = e.key.toLowerCase();
+      if (editMode === 'component') {
+        if (k === 'w') setTransformMode('translate');
+        else if (k === 'e') setTransformMode('rotate');
+        else if (k === 'r') setTransformMode('scale');
+      }
+      if (k === 'escape') {
+        setSelectedComponentIds([]);
+        setActiveRefId(null);
+      }
+      if (k === 'f') useStore.getState().triggerFrameSelected();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [editMode, setTransformMode, setSelectedComponentIds, setActiveRefId]);
 
-  // The 4 registered objects plus the disabled future row (Section 4 & 7)
-  const items: DropdownItem[] = [
-    {
-      id: 'table',
-      label: 'Table',
-      icon: 'table-2',
-      description: 'Create and customize parametric tables, desks, and surfaces.',
-    },
-    {
-      id: 'chair',
-      label: 'Chair',
-      icon: 'armchair',
-      description: 'Generate customizable chairs, stools, and armchairs.',
-    },
-    {
-      id: 'cup',
-      label: 'Cup',
-      icon: 'cup-soda',
-      description: 'Procedurally model hollow glasses, cups, and tumblers.',
-    },
-    {
-      id: 'mug',
-      label: 'Mug',
-      icon: 'coffee',
-      description: 'Model hollow mugs with fully attached curved handles.',
-    },
-    {
-      id: 'coming-soon',
-      label: 'More objects',
-      icon: 'settings-2',
-      description: 'Coming soon — additional object types under development.',
-      disabled: true,
-    }
+  const items: ObjectItem[] = [
+    { id: 'table',  label: 'Table',  icon: 'table-2',  description: 'Parametric tables and surfaces.' },
+    { id: 'chair',  label: 'Chair',  icon: 'armchair', description: 'Chairs, stools, and armchairs.' },
+    { id: 'cup',    label: 'Cup',    icon: 'cup-soda', description: 'Hollow glasses and tumblers.' },
+    { id: 'mug',    label: 'Mug',    icon: 'coffee',   description: 'Mugs with curved handles.' },
+    { id: 'coming-soon', label: 'More objects', icon: 'box', description: 'Coming soon.', disabled: true },
   ];
 
-  // Number of active (selectable) items
-  const activeItemsCount = items.filter(item => !item.disabled).length;
+  const activeItem   = items.find(i => i.id === selectedObjectType) || items[0];
+  const ActiveIcon   = iconMap[activeItem.icon] || Table2;
+  const activeCount  = items.filter(i => !i.disabled).length;
 
-  const toggleDropdown = () => {
-    setIsOpen(!isOpen);
-    if (!isOpen) {
-      // Highlight current selected item index
-      const currentIndex = items.findIndex(item => item.id === selectedObjectType);
-      setHighlightedIndex(currentIndex >= 0 ? currentIndex : 0);
-    }
+  const openDrop = () => {
+    setDropOpen(true);
+    const idx = items.findIndex(i => i.id === selectedObjectType);
+    setHighlightIdx(idx >= 0 ? idx : 0);
+  };
+
+  const closeDrop = () => {
+    setDropOpen(false);
+    triggerRef.current?.focus();
   };
 
   const handleSelect = (id: string) => {
     setSelectedObjectType(id);
-    setIsOpen(false);
-    triggerRef.current?.focus();
+    closeDrop();
   };
 
   // Close on outside click
   useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
+    const onDown = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
+        setDropOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
   }, []);
 
-  // Keyboard navigation logic (Section 4 listbox mechanics)
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement | HTMLDivElement>) => {
-    if (!isOpen) {
-      if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        setIsOpen(true);
-        const currentIndex = items.findIndex(item => item.id === selectedObjectType);
-        setHighlightedIndex(currentIndex >= 0 ? currentIndex : 0);
-      }
+  const onTriggerKey = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (!dropOpen) {
+      if (['ArrowDown', 'Enter', ' '].includes(e.key)) { e.preventDefault(); openDrop(); }
       return;
     }
-
     switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        // Cycle only through active items (0-3)
-        setHighlightedIndex((prev) => (prev + 1) % activeItemsCount);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        // Cycle only through active items (0-3)
-        setHighlightedIndex((prev) => (prev - 1 + activeItemsCount) % activeItemsCount);
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (highlightedIndex >= 0 && highlightedIndex < activeItemsCount) {
-          handleSelect(items[highlightedIndex].id);
-        }
-        break;
+      case 'ArrowDown': e.preventDefault(); setHighlightIdx(p => (p + 1) % activeCount); break;
+      case 'ArrowUp':   e.preventDefault(); setHighlightIdx(p => (p - 1 + activeCount) % activeCount); break;
+      case 'Enter':     e.preventDefault(); if (highlightIdx < activeCount) handleSelect(items[highlightIdx].id); break;
       case 'Escape':
-      case 'Tab':
-        setIsOpen(false);
-        triggerRef.current?.focus();
-        break;
+      case 'Tab':       closeDrop(); break;
     }
   };
 
+  const isMobileOrTablet = width !== null && width < 1024;
+
   return (
-    <header className="h-[56px] w-full bg-gradient-to-b from-[#141724] to-[#0f111a] border-b border-border-strong px-4 flex items-center justify-between text-text-primary select-none z-50 relative">
-      {/* Left: Brand and Object Selection dropdown */}
-      <div className="flex items-center gap-4 h-full">
-        <span className="font-mono font-bold text-size-header tracking-wider text-text-primary">
-          PARAMETRIC_3D
-        </span>
-        
-        <div className="h-6 w-[1px] bg-border-strong" />
+    <header className="h-12 w-full bg-surface-0 border-b border-border-subtle flex items-center px-3 gap-2 z-50 relative shrink-0 select-none">
 
-        {/* Combobox container (Section 4) */}
+      {/* ─── LEFT: Brand + Object picker ───────────────────────────── */}
+      <div className="flex items-center gap-2.5 shrink-0">
+        {/* Brand */}
+        <div className="flex items-center gap-1.5">
+          <Box className="w-4 h-4 text-accent-text shrink-0" />
+          <span className="text-[13px] font-semibold text-text-primary tracking-tight hidden sm:block">
+            Parametric Studio
+          </span>
+        </div>
+
+        <Divider />
+
+        {/* Object selector */}
         <div className="relative" ref={containerRef}>
-          <button
-            ref={triggerRef}
-            id="object-select-trigger"
-            role="combobox"
-            aria-expanded={isOpen}
-            aria-haspopup="listbox"
-            aria-controls="object-select-listbox"
-            onClick={toggleDropdown}
-            onKeyDown={handleKeyDown}
-            className="flex items-center gap-3 px-4 h-8 rounded-full bg-surface-2 border border-border-strong hover:bg-surface-3 transition-colors duration-150 text-size-body font-medium text-text-primary cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-surface-0 relative overflow-hidden"
-          >
-            {sweepActive && (
-              <span className="absolute inset-0 bg-gradient-to-r from-accent/0 via-accent/25 to-accent/0 animate-sweep pointer-events-none" />
-            )}
-            <ActiveIcon className="w-4 h-4 text-text-accent" />
-            <span>{activeModule.label}</span>
-            <ChevronDown className={`w-3.5 h-3.5 text-text-tertiary transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-          </button>
+          <div className="flex flex-col gap-0">
+            <span className="text-[9px] font-bold text-text-tertiary uppercase tracking-widest leading-none mb-0.5 pl-0.5">
+              Object
+            </span>
+            <button
+              ref={triggerRef}
+              id="object-select-trigger"
+              role="combobox"
+              aria-expanded={dropOpen}
+              aria-haspopup="listbox"
+              aria-controls="object-select-listbox"
+              onClick={() => dropOpen ? closeDrop() : openDrop()}
+              onKeyDown={onTriggerKey}
+              className="flex items-center gap-2 px-2.5 h-7 rounded bg-surface-2 border border-border-default hover:border-border-strong transition-colors text-[12px] font-medium text-text-primary cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-accent relative overflow-hidden"
+            >
+              {sweepActive && (
+                <span className="absolute inset-0 bg-gradient-to-r from-accent/0 via-accent/20 to-accent/0 animate-sweep pointer-events-none" />
+              )}
+              <ActiveIcon className="w-3.5 h-3.5 text-text-accent shrink-0" />
+              <span>{activeItem.label}</span>
+              <ChevronDown className={`w-3 h-3 text-text-tertiary transition-transform duration-200 ml-0.5 ${dropOpen ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
 
-          {/* Floating dropdown listbox */}
-          {isOpen && (
+          {/* Dropdown listbox */}
+          {dropOpen && (
             <div
               id="object-select-listbox"
               role="listbox"
               aria-labelledby="object-select-trigger"
-              className="absolute top-10 left-0 w-[340px] bg-surface-2 border border-border-default rounded-md shadow-xl py-1 z-50 focus:outline-none"
+              className="absolute top-[calc(100%+6px)] left-0 w-72 bg-surface-2 border border-border-default rounded-md shadow-lg py-1 z-50 animate-panel-in"
             >
               {items.map((item, index) => {
-                const ItemIcon = iconMap[item.icon] || HelpCircle;
+                const ItemIcon   = iconMap[item.icon] || HelpCircle;
                 const isSelected = item.id === selectedObjectType;
-                const isHighlighted = index === highlightedIndex;
+                const isHovered  = index === highlightIdx;
 
                 if (item.disabled) {
                   return (
-                    <div
-                      key={item.id}
-                      role="option"
-                      aria-disabled="true"
-                      aria-selected="false"
-                      title="Additional object types will be added in a future release."
-                      className="px-4 py-2 mt-1 border-t border-border-subtle flex items-start gap-3 opacity-40 text-text-tertiary cursor-not-allowed select-none"
-                    >
-                      <HelpCircle className="w-4 h-4 mt-0.5" />
+                    <div key={item.id} role="option" aria-disabled="true" aria-selected="false"
+                      className="px-3 py-2 mt-1 border-t border-border-subtle flex items-start gap-2.5 opacity-35 cursor-not-allowed">
+                      <HelpCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-text-tertiary" />
                       <div className="flex flex-col">
-                        <span className="text-size-body font-bold">{item.label}</span>
-                        <span className="text-size-micro text-text-tertiary">{item.description}</span>
+                        <span className="text-[12px] font-semibold text-text-tertiary">{item.label}</span>
+                        <span className="text-[10px] text-text-tertiary">{item.description}</span>
                       </div>
                     </div>
                   );
                 }
 
                 return (
-                  <div
-                    key={item.id}
-                    role="option"
-                    aria-selected={isSelected}
-                    id={`object-option-${item.id}`}
+                  <div key={item.id} role="option" aria-selected={isSelected} id={`obj-opt-${item.id}`}
                     onClick={() => handleSelect(item.id)}
-                    onMouseEnter={() => setHighlightedIndex(index)}
-                    className={`px-4 py-2 flex items-start gap-3 cursor-pointer select-none transition-colors duration-100 ${
-                      isSelected 
-                        ? 'border-l-2 border-border-accent bg-accent-muted text-text-primary' 
-                        : 'border-l-2 border-transparent text-text-secondary'
-                    } ${
-                      isHighlighted && !isSelected 
-                        ? 'bg-surface-3 text-text-primary' 
-                        : ''
-                    }`}
+                    onMouseEnter={() => setHighlightIdx(index)}
+                    className={[
+                      'px-3 py-2 flex items-start gap-2.5 cursor-pointer select-none transition-colors duration-75 border-l-2',
+                      isSelected
+                        ? 'border-accent bg-accent-muted text-text-primary'
+                        : isHovered
+                          ? 'border-transparent bg-surface-3 text-text-primary'
+                          : 'border-transparent text-text-secondary',
+                    ].join(' ')}
                   >
-                    <ItemIcon className={`w-4 h-4 mt-0.5 ${isSelected ? 'text-text-accent' : 'text-text-tertiary'}`} />
+                    <ItemIcon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${isSelected ? 'text-text-accent' : 'text-text-tertiary'}`} />
                     <div className="flex flex-col">
-                      <span className="text-size-body font-bold">{item.label}</span>
-                      <span className="text-size-micro text-text-tertiary">{item.description}</span>
+                      <span className="text-[12px] font-semibold">{item.label}</span>
+                      <span className="text-[10px] text-text-tertiary leading-relaxed">{item.description}</span>
                     </div>
                   </div>
                 );
@@ -272,156 +313,144 @@ export default function Toolbar() {
           )}
         </div>
 
-        {/* Toggle Hierarchy button for mobile/tablet drawers (Section 16) */}
-        {width && width < 1024 && (
+        {/* Mobile/Tablet hierarchy toggle */}
+        {isMobileOrTablet && (
           <button
             onClick={() => {
-              if (width < 768) {
-                setActiveMobileTab('hierarchy');
-                setHierarchyDrawerOpen(!hierarchyDrawerOpen);
-              } else {
-                setHierarchyDrawerOpen(!hierarchyDrawerOpen);
-              }
+              if (width! < 768) { setActiveMobileTab('hierarchy'); }
+              setHierarchyDrawerOpen(!hierarchyDrawerOpen);
             }}
-            title="Toggle Scene Hierarchy"
-            className={`w-8 h-8 rounded-sm flex items-center justify-center border transition-all cursor-pointer ${
-              hierarchyDrawerOpen 
-                ? 'bg-surface-2 border-border-strong text-text-accent font-bold shadow' 
-                : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-surface-2'
+            data-tooltip="Scene"
+            aria-label="Toggle Scene Panel"
+            className={`w-7 h-7 rounded flex items-center justify-center cursor-pointer transition-colors ${
+              hierarchyDrawerOpen ? 'bg-accent-muted text-text-accent border border-accent/30' : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
             }`}
           >
-            <ListTree className="w-4.5 h-4.5" />
+            <ListTree className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
 
-      {/* Middle: Viewport controls (Section 3 & 4 & 6 & Section 19.3) */}
-      <div className="flex items-center gap-4">
-        {/* Navigation/Viewing Cluster (Section 19.3) */}
-        <div className="flex items-center bg-surface-2 border border-border-default rounded-sm p-0.5 h-8 gap-0.5 shadow-sm">
-          {/* Select Cursor */}
-          <button 
-            aria-label="Select Tool"
-            title="Selection Mode (Default)"
-            className="w-8 h-8 rounded-sm bg-surface-3 text-text-accent flex items-center justify-center cursor-default"
-          >
-            <MousePointer2 className="w-4 h-4" />
-          </button>
-          
-          {/* Frame Selection */}
-          <button 
-            onClick={() => useStore.getState().triggerFrameSelected()}
-            aria-label="Frame Selection"
-            title="Frame Selected Element"
-            className="w-8 h-8 rounded-sm hover:bg-surface-3 flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer transition-colors duration-150"
-          >
-            <Scan className="w-4 h-4" />
-          </button>
-          
-          {/* Reset View */}
-          <button 
-            onClick={() => useStore.getState().triggerResetView()}
-            aria-label="Reset View"
-            title="Reset Camera Position"
-            className="w-8 h-8 rounded-sm hover:bg-surface-3 flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer transition-colors duration-150"
-          >
-            <RefreshCcw className="w-4 h-4" />
-          </button>
-        </div>
+      {/* ─── CENTER: Primary tool groups ───────────────────────────── */}
+      <div className="flex-1 flex items-center justify-center gap-2">
+        {/* Camera tools */}
+        <ToolGroup>
+          <ToolBtn icon={MousePointer2} label="Select" active={editMode === 'parametric' && !dropOpen} onClick={() => {}} />
+          <ToolBtn icon={Crosshair}    label="Frame Selection" kbd="F" onClick={() => useStore.getState().triggerFrameSelected()} />
+          <ToolBtn icon={RefreshCcw}   label="Reset View"                onClick={() => useStore.getState().triggerResetView()} />
+        </ToolGroup>
 
-        {/* Viewport Helpers Cluster (Section 19.3) */}
-        <div className="flex items-center bg-surface-2 border border-border-default rounded-sm p-0.5 h-8 gap-0.5 shadow-sm">
-          {/* Grid Toggle */}
-          <button 
+        <Divider />
+
+        {/* Edit mode toggle */}
+        <ToolGroup>
+          <ToolBtn
+            label="Properties"
+            active={editMode === 'parametric'}
+            onClick={() => setEditMode('parametric')}
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>Properties</span>
+          </ToolBtn>
+          <ToolBtn
+            label="Parts"
+            active={editMode === 'component'}
+            onClick={() => setEditMode('component')}
+          >
+            <Settings2 className="w-3.5 h-3.5" />
+            <span>Parts</span>
+          </ToolBtn>
+        </ToolGroup>
+
+        {/* Transform tools — only visible in Parts mode */}
+        {editMode === 'component' && (
+          <>
+            <Divider />
+            <ToolGroup>
+              <ToolBtn icon={Move}      label="Move"   kbd="W" active={transformMode === 'translate'} onClick={() => setTransformMode('translate')} />
+              <ToolBtn icon={RotateCw}  label="Rotate" kbd="E" active={transformMode === 'rotate'}    onClick={() => setTransformMode('rotate')} />
+              <ToolBtn icon={Maximize2} label="Scale"  kbd="R" active={transformMode === 'scale'}     onClick={() => setTransformMode('scale')} />
+            </ToolGroup>
+          </>
+        )}
+
+        <Divider />
+
+        {/* Viewport display */}
+        <ToolGroup>
+          <ToolBtn
+            icon={Grid3x3}
+            label="Grid"
+            active={gridEnabled}
             onClick={() => useStore.getState().toggleGrid()}
-            aria-label="Grid Toggle"
-            title="Toggle Grid Helper"
-            className={`w-8 h-8 rounded-sm flex items-center justify-center transition-colors duration-150 cursor-pointer ${
-              useStore((state) => state.gridEnabled)
-                ? 'bg-surface-3 text-text-accent' 
-                : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-surface-3'
+          />
+          <div className="w-px h-4 bg-border-subtle" />
+          {/* Solid / Wireframe */}
+          <button
+            onClick={() => useStore.getState().setShadingMode('solid')}
+            data-tooltip="Solid"
+            aria-label="Solid shading"
+            className={`h-7 px-2 rounded text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${
+              shadingMode === 'solid' ? 'bg-accent text-text-on-accent' : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
             }`}
           >
-            <Grid3x3 className="w-4 h-4" />
+            Solid
           </button>
-
-          {/* Shading Mode (Solid / Wire) */}
-          <div className="flex items-center bg-surface-3 border border-border-subtle rounded-sm p-0.5 h-7 gap-0.5">
-            <button
-              onClick={() => useStore.getState().setShadingMode('solid')}
-              title="Solid shading mode"
-              className={`px-2 h-full rounded-sm flex items-center justify-center text-size-micro uppercase font-bold tracking-wider transition-colors cursor-pointer ${
-                useStore((state) => state.shadingMode) === 'solid'
-                  ? 'bg-accent text-text-on-accent'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              Solid
-            </button>
-            <button
-              onClick={() => useStore.getState().setShadingMode('wireframe')}
-              title="Wireframe shading mode"
-              className={`px-2 h-full rounded-sm flex items-center justify-center text-size-micro uppercase font-bold tracking-wider transition-colors cursor-pointer ${
-                useStore((state) => state.shadingMode) === 'wireframe'
-                  ? 'bg-accent text-text-on-accent'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              Wire
-            </button>
-          </div>
-
-          {/* Bounding Box Toggle */}
-          <button 
+          <button
+            onClick={() => useStore.getState().setShadingMode('wireframe')}
+            data-tooltip="Wireframe"
+            aria-label="Wireframe shading"
+            className={`h-7 px-2 rounded text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${
+              shadingMode === 'wireframe' ? 'bg-accent text-text-on-accent' : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
+            }`}
+          >
+            Wire
+          </button>
+          <div className="w-px h-4 bg-border-subtle" />
+          <ToolBtn
+            icon={BoxSelect}
+            label="Bounding Box"
+            active={boundingBoxEnabled}
             onClick={() => useStore.getState().toggleBoundingBox()}
-            aria-label="Bounding Box"
-            title="Toggle Bounding Box Helper"
-            className={`w-8 h-8 rounded-sm flex items-center justify-center transition-colors duration-150 cursor-pointer ${
-              useStore((state) => state.boundingBoxEnabled)
-                ? 'bg-surface-3 text-text-accent' 
-                : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-surface-3'
-            }`}
-          >
-            <BoxSelect className="w-4 h-4" />
-          </button>
-        </div>
+          />
+        </ToolGroup>
       </div>
 
-      {/* Right: Reset & Randomize actions (Section 3) */}
-      <div className="flex items-center gap-2">
-        {/* Toggle Inspector button for mobile/tablet drawers (Section 16) */}
-        {width && width < 1024 && (
+      {/* ─── RIGHT: Object actions + Inspector toggle ───────────────── */}
+      <div className="flex items-center gap-2 shrink-0">
+        {isMobileOrTablet && (
           <button
             onClick={() => {
-              if (width < 768) {
-                setActiveMobileTab('inspector');
-                setInspectorDrawerOpen(!inspectorDrawerOpen);
-              } else {
-                setInspectorDrawerOpen(!inspectorDrawerOpen);
-              }
+              if (width! < 768) { setActiveMobileTab('inspector'); }
+              setInspectorDrawerOpen(!inspectorDrawerOpen);
             }}
-            title="Toggle Inspector"
-            className={`w-8 h-8 rounded-sm flex items-center justify-center border transition-all cursor-pointer mr-1 ${
-              inspectorDrawerOpen 
-                ? 'bg-surface-2 border-border-strong text-text-accent font-bold shadow' 
-                : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-surface-2'
+            data-tooltip="Inspector"
+            aria-label="Toggle Inspector"
+            className={`w-7 h-7 rounded flex items-center justify-center cursor-pointer transition-colors ${
+              inspectorDrawerOpen ? 'bg-accent-muted text-text-accent border border-accent/30' : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
             }`}
           >
-            <Sliders className="w-4.5 h-4.5" />
+            <Sliders className="w-3.5 h-3.5" />
           </button>
         )}
+
         <button
           onClick={resetObject}
-          className="flex items-center gap-1.5 px-3 h-8 rounded-sm bg-surface-1 border border-border-default hover:bg-surface-2 text-size-secondary font-medium text-text-secondary cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-1 focus:ring-accent"
+          data-tooltip="Restore to last preset"
+          aria-label="Reset Changes"
+          className="flex items-center gap-1.5 px-2.5 h-7 rounded bg-surface-1 border border-border-default hover:bg-surface-2 hover:border-border-strong text-[12px] font-medium text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>Reset Object</span>
+          <RotateCcw className="w-3 h-3" />
+          <span>Reset</span>
         </button>
+
         <button
           onClick={randomizeObject}
-          className="flex items-center gap-1.5 px-3 h-8 rounded-sm bg-surface-1 border border-border-default hover:bg-surface-2 text-size-secondary font-medium text-text-secondary cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-1 focus:ring-accent"
+          data-tooltip="Generate a random valid variation"
+          aria-label="Randomize"
+          className="flex items-center gap-1.5 px-2.5 h-7 rounded bg-surface-1 border border-border-default hover:bg-surface-2 hover:border-border-strong text-[12px] font-medium text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
         >
-          <Shuffle className="w-3.5 h-3.5" />
+          <Shuffle className="w-3 h-3" />
           <span>Randomize</span>
         </button>
       </div>

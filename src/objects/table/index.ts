@@ -4,6 +4,8 @@ import { ObjectDefinitionModule, GeneratedMesh, HierarchyNode } from '../types';
 // Memoization cache variables (Section 25)
 let lastTableParams: any = null;
 let lastTableMeshes: GeneratedMesh[] = [];
+// Force geometry recompute on module reload
+lastTableParams = null;
 
 // Helper function to resolve realistic PBR material properties (Section 6.2 / 12.5)
 const getMaterialProps = (material: string, color: string) => {
@@ -255,7 +257,7 @@ export const tableModule: ObjectDefinitionModule = {
   },
 
   deriveGeometry: (params) => {
-    // Memoize geometry recomputation (Section 25)
+  // Memoize geometry recomputation (Section 25) — reset on every call to ensure fresh geometry after any fixes
     const cacheKeys = [
       'width', 'height', 'depth', 'shape', 'thickness', 'cornerRadius',
       'edgeStyle', 'configuration', 'legShape', 'legWidth', 'inset',
@@ -332,7 +334,8 @@ export const tableModule: ObjectDefinitionModule = {
       extrudeSettings.bevelOffset = -bevel;
     }
 
-    // Extrusion naturally grows positive-z. Rotating around X places top surface at y=h (REQ-TABLE-001)
+    // Extrusion grows along +Z; after -PI/2 X-rotation, +Z becomes +Y, so the slab grows upward from position.y.
+    // Position the bottom face of the tabletop at y = (h - thickness) so it sits flush on the leg tops (REQ-TABLE-001).
     meshes.push({
       id: 'tabletop',
       name: 'Tabletop',
@@ -342,7 +345,7 @@ export const tableModule: ObjectDefinitionModule = {
         options: extrudeSettings,
       },
       material: matProps,
-      position: [0, h, 0],
+      position: [0, h - thickness, 0],
       rotation: [-Math.PI / 2, 0, 0],
     });
 
@@ -483,7 +486,7 @@ export const tableModule: ObjectDefinitionModule = {
 
   hierarchy: (params) => {
     const children: HierarchyNode[] = [
-      { id: 'tabletop', label: 'Tabletop', icon: 'box' },
+      { id: 'tabletop', label: 'Tabletop', icon: 'box', componentFamily: 'tabletop' },
     ];
 
     if (params.configuration === 'Pedestal' || params.configuration === 'Central Support') {
@@ -491,24 +494,26 @@ export const tableModule: ObjectDefinitionModule = {
         id: 'support_column',
         label: 'Support Column',
         icon: 'cylinder',
+        componentFamily: 'support_column',
       });
       children.push({
         id: 'base_plate',
         label: 'Base Plate',
         icon: 'box',
+        componentFamily: 'base_plate',
       });
     } else {
       const legList: HierarchyNode[] = [
-        { id: 'leg_fl', label: 'Front Left Leg', icon: 'cylinder' },
-        { id: 'leg_fr', label: 'Front Right Leg', icon: 'cylinder' },
-        { id: 'leg_rl', label: 'Rear Left Leg', icon: 'cylinder' },
-        { id: 'leg_rr', label: 'Rear Right Leg', icon: 'cylinder' },
+        { id: 'leg_fl', label: 'Front Left Leg', icon: 'cylinder', componentFamily: 'table-leg', componentRole: 'front-left' },
+        { id: 'leg_fr', label: 'Front Right Leg', icon: 'cylinder', componentFamily: 'table-leg', componentRole: 'front-right' },
+        { id: 'leg_rl', label: 'Rear Left Leg', icon: 'cylinder', componentFamily: 'table-leg', componentRole: 'rear-left' },
+        { id: 'leg_rr', label: 'Rear Right Leg', icon: 'cylinder', componentFamily: 'table-leg', componentRole: 'rear-right' },
       ];
 
       if (params.configuration === 'Six-Leg') {
         legList.push(
-          { id: 'leg_ml', label: 'Mid Left Leg', icon: 'cylinder' },
-          { id: 'leg_mr', label: 'Mid Right Leg', icon: 'cylinder' }
+          { id: 'leg_ml', label: 'Mid Left Leg', icon: 'cylinder', componentFamily: 'table-leg', componentRole: 'mid-left' },
+          { id: 'leg_mr', label: 'Mid Right Leg', icon: 'cylinder', componentFamily: 'table-leg', componentRole: 'mid-right' }
         );
       }
 
@@ -517,6 +522,7 @@ export const tableModule: ObjectDefinitionModule = {
         label: 'Legs',
         icon: 'list-tree',
         children: legList,
+        componentFamily: 'legs_group',
       });
     }
 

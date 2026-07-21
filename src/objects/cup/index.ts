@@ -275,10 +275,10 @@ export const cupModule: ObjectDefinitionModule = {
       label: 'Cup',
       icon: 'cup-soda',
       children: [
-        { id: 'outer_body', label: 'Outer Body', icon: 'cylinder' },
-        { id: 'inner_wall', label: 'Inner Cavity', icon: 'cylinder' },
-        { id: 'base', label: 'Base', icon: 'box' },
-        { id: 'rim', label: 'Rim', icon: 'box' },
+        { id: 'outer_body', label: 'Outer Body', icon: 'cylinder', componentFamily: 'outer_body' },
+        { id: 'inner_wall', label: 'Inner Cavity', icon: 'cylinder', componentFamily: 'inner_wall' },
+        { id: 'base', label: 'Base', icon: 'box', componentFamily: 'base' },
+        { id: 'rim', label: 'Rim', icon: 'box', componentFamily: 'rim' },
       ],
     };
   },

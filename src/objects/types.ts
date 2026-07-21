@@ -31,6 +31,8 @@ export interface HierarchyNode {
   label: string;
   icon: string; // Lucide icon name
   children?: HierarchyNode[];
+  componentFamily?: string;
+  componentRole?: string;
 }
 
 export interface GeneratedMesh {

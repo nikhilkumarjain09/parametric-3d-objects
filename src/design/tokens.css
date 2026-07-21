@@ -1,112 +1,172 @@
-/* Design Tokens - System-wide variables */
+/* Design Tokens — System-wide variables (dark theme only) */
 
 :root {
-  /* 
-   * 1. Background / Surface Hierarchy (Dark theme only)
-   * Derived from a single dark neutral base (HSL: 224, 12% saturation)
-   * with modest luminance increases per step (roughly 3-4% perceptual steps)
+  /*
+   * 1. Background / Surface Hierarchy
+   * Built on a single cool-neutral base: HSL(224, 12%, x%)
+   * Each level adds ~3-4% luminance. Never use raw black or white.
    */
-  --bg-app: hsl(224, 12%, 6%);          /* #0d0e12 - Outermost app background */
-  --surface-0: hsl(224, 12%, 9%);       /* #14151b - Toolbar / Status Bar base */
-  --surface-1: hsl(224, 12%, 12%);      /* #1a1c24 - Panel resting background */
-  --surface-2: hsl(224, 12%, 16%);      /* #232630 - Hover / raised row / input bg */
-  --surface-3: hsl(224, 12%, 20%);      /* #2d313e - Active / pressed / popover surface */
-  --bg-viewport: hsl(224, 16%, 4%);     /* #08090c - Cool-neutral 3D viewport background */
+  --bg-app:           hsl(224, 14%, 5%);   /* Outermost workspace */
+  --surface-0:        hsl(224, 12%, 8%);   /* Toolbar / StatusBar */
+  --surface-1:        hsl(224, 12%, 11%);  /* Side-panel resting */
+  --surface-2:        hsl(224, 12%, 15%);  /* Hover / raised row / input */
+  --surface-3:        hsl(224, 12%, 19%);  /* Active / pressed / popover */
+  --surface-4:        hsl(224, 12%, 24%);  /* Focus highlight / deepest popover */
+  --bg-viewport:      hsl(224, 18%, 3%);   /* 3D canvas background */
 
-  /* 
-   * 2. Accent & Semantic Colors 
-   * Accent color is a single consistent professional teal
+  /*
+   * 2. Accent & Semantic Colors
+   * One energetic teal accent; semantic colours for status only.
    */
-  --accent: hsl(174, 84%, 38%);         /* #0d9488 - Teal-600 */
-  --accent-hover: hsl(174, 84%, 32%);   /* #0f766e - Teal-700 */
-  --accent-light: hsl(174, 84%, 25%);   /* #115e59 - Teal-800 */
-  --accent-muted: hsla(174, 84%, 38%, 0.15);
-  
-  --success: hsl(150, 84%, 39%);        /* Emerald-500 validation status */
-  --warning: hsl(38, 92%, 50%);         /* Amber-500 auto-clamped/warnings */
-  --error: hsl(0, 84%, 60%);            /* Red-500 hard failures */
+  --accent:           hsl(174, 80%, 36%);  /* Teal-600 — active/selected */
+  --accent-hover:     hsl(174, 80%, 30%);  /* Teal-700 — hover on accent */
+  --accent-light:     hsl(174, 80%, 24%);  /* Teal-800 — pressed */
+  --accent-muted:     hsla(174, 80%, 36%, 0.12); /* Subtle background tint */
+  --accent-text:      hsl(174, 70%, 44%);  /* Text on dark bg near accent */
 
-  /* 
-   * 3. Borders (1px) 
-   * Formed from the same cool-neutral base
+  --success:          hsl(150, 78%, 38%);  /* Emerald */
+  --warning:          hsl(38, 90%, 50%);   /* Amber */
+  --error:            hsl(0, 78%, 58%);    /* Red */
+
+  /* Axis indicator dots — desaturated, intentionally muted */
+  --axis-x:           hsl(0, 55%, 55%);    /* Muted red — X axis */
+  --axis-y:           hsl(130, 40%, 46%);  /* Muted green — Y axis */
+  --axis-z:           hsl(215, 60%, 55%);  /* Muted blue — Z axis */
+
+  /*
+   * 3. Borders
    */
-  --border-subtle: hsl(224, 12%, 15%);  /* Panel/section dividers */
-  --border-default: hsl(224, 12%, 22%); /* Inputs/controls resting state */
-  --border-strong: hsl(224, 12%, 30%);  /* Focus/hover or toolbar bottom */
-  --border-accent: hsl(174, 84%, 38%);  /* Selected state border */
+  --border-subtle:    hsl(224, 12%, 14%);  /* Dividers between panels */
+  --border-default:   hsl(224, 12%, 20%);  /* Controls at rest */
+  --border-strong:    hsl(224, 12%, 28%);  /* Focus / hover state */
+  --border-accent:    hsl(174, 80%, 36%);  /* Selected / active control */
 
-  /* 
-   * 4. Text Hierarchy 
-   * Formed from the same cool-neutral base for coherence
+  /*
+   * 4. Text
    */
-  --text-primary: hsl(224, 10%, 95%);   /* Primary labels, values, headings (Slate-50) */
-  --text-secondary: hsl(224, 10%, 80%); /* Section labels, helper text, units (Slate-300) */
-  --text-tertiary: hsl(224, 10%, 55%);  /* Disabled text, placeholders, header labels (Slate-500) */
-  --text-accent: hsl(174, 75%, 45%);    /* Teal-400 active-state text */
-  --text-on-accent: hsl(0, 0%, 100%);   /* White text on accent backgrounds */
+  --text-primary:     hsl(224, 8%, 94%);   /* Main labels, values */
+  --text-secondary:   hsl(224, 8%, 72%);   /* Section labels, helper */
+  --text-tertiary:    hsl(224, 8%, 48%);   /* Placeholders, disabled */
+  --text-accent:      hsl(174, 70%, 48%);  /* Active-state inline text */
+  --text-on-accent:   hsl(0, 0%, 100%);    /* White on accent bg */
 
-  /* 
+  /*
    * 5. Border Radius
+   * Keep conservative — this is a professional desktop tool.
    */
-  --radius-sm: 4px;                     /* Inputs, compact buttons, dropdowns */
-  --radius-md: 6px;                     /* Floating menus, popovers, tooltips, dialogs */
+  --radius-xs:        2px;   /* Tiny badges, indicators */
+  --radius-sm:        4px;   /* Inputs, compact buttons */
+  --radius-md:        6px;   /* Popovers, floating menus */
+  --radius-lg:        8px;   /* Modals, large cards */
 
-  /* 
-   * 6. Font Sizes (Scale from 9.8)
+  /*
+   * 6. Typography Scale
    */
-  --font-size-micro: 11px;
-  --font-size-secondary: 12px;
-  --font-size-body: 13px;
-  --font-size-header: 15px;
-  --font-size-title: 18px;
+  --font-size-micro:   10px;
+  --font-size-xs:      11px;
+  --font-size-sm:      12px;
+  --font-size-base:    13px;
+  --font-size-md:      14px;
+  --font-size-lg:      15px;
+  --font-size-xl:      17px;
+
+  /*
+   * 7. Motion
+   */
+  --motion-instant:   50ms;
+  --motion-fast:      120ms;
+  --motion-normal:    200ms;
+  --motion-slow:      300ms;
+  --ease-out:         cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:      cubic-bezier(0.4, 0, 0.2, 1);
+
+  /*
+   * 8. Layout Spacing
+   */
+  --height-toolbar:     48px;
+  --height-statusbar:   32px;
+  --height-row:         28px;
+  --height-row-compact: 24px;
+  --height-control:     30px;
+  --height-section-hd:  28px;
+
+  --width-left-panel:   268px;
+  --width-right-panel:  320px;
+
+  /*
+   * 9. Shadows
+   */
+  --shadow-sm:    0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md:    0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg:    0 8px 32px rgba(0, 0, 0, 0.6);
+  --shadow-panel: 2px 0 12px rgba(0, 0, 0, 0.35);
 }
 
+/* ─────────────────────────────────────────────
+   Tailwind v4 @theme mappings
+   ───────────────────────────────────────────── */
 @theme {
-  /* Tailwind Color Mappings */
-  --color-app: var(--bg-app);
-  --color-surface-0: var(--surface-0);
-  --color-surface-1: var(--surface-1);
-  --color-surface-2: var(--surface-2);
-  --color-surface-3: var(--surface-3);
-  --color-viewport: var(--bg-viewport);
+  /* Surfaces */
+  --color-app:          var(--bg-app);
+  --color-surface-0:    var(--surface-0);
+  --color-surface-1:    var(--surface-1);
+  --color-surface-2:    var(--surface-2);
+  --color-surface-3:    var(--surface-3);
+  --color-surface-4:    var(--surface-4);
+  --color-viewport:     var(--bg-viewport);
 
-  --color-accent: var(--accent);
+  /* Accent */
+  --color-accent:       var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-light: var(--accent-light);
   --color-accent-muted: var(--accent-muted);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-error: var(--error);
+  --color-accent-text:  var(--accent-text);
 
-  --color-border-subtle: var(--border-subtle);
-  --color-border-default: var(--border-default);
-  --color-border-strong: var(--border-strong);
-  --color-border-accent: var(--border-accent);
+  /* Semantic */
+  --color-success:      var(--success);
+  --color-warning:      var(--warning);
+  --color-error:        var(--error);
 
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-text-tertiary: var(--text-tertiary);
-  --color-text-accent: var(--text-accent);
-  --color-text-on-accent: var(--text-on-accent);
+  /* Axis */
+  --color-axis-x:       var(--axis-x);
+  --color-axis-y:       var(--axis-y);
+  --color-axis-z:       var(--axis-z);
 
-  /* Border Radii Mappings */
-  --radius-sm: var(--radius-sm);
-  --radius-md: var(--radius-md);
+  /* Borders */
+  --color-border-subtle:   var(--border-subtle);
+  --color-border-default:  var(--border-default);
+  --color-border-strong:   var(--border-strong);
+  --color-border-accent:   var(--border-accent);
 
-  /* Typography Scale Mappings */
-  --text-micro: var(--font-size-micro);
-  --text-secondary: var(--font-size-secondary);
-  --text-body: var(--font-size-body);
-  --text-header: var(--font-size-header);
-  --text-title: var(--font-size-title);
+  /* Text */
+  --color-text-primary:    var(--text-primary);
+  --color-text-secondary:  var(--text-secondary);
+  --color-text-tertiary:   var(--text-tertiary);
+  --color-text-accent:     var(--text-accent);
+  --color-text-on-accent:  var(--text-on-accent);
 
-  /* Sizing scale from Section 9.7 wired into Tailwind spacings */
-  --spacing-toolbar: 56px;
-  --spacing-statusbar: 36px;
-  --spacing-control: 32px;
-  --spacing-control-compact: 28px;
-  --spacing-hierarchy-row: 28px;
-  --spacing-section-header: 32px;
-  --spacing-left-panel: 280px;
-  --spacing-right-panel: 340px;
+  /* Typography sizes */
+  --text-micro:   var(--font-size-micro);
+  --text-xs:      var(--font-size-xs);
+  --text-sm:      var(--font-size-sm);
+  --text-base:    var(--font-size-base);
+  --text-md:      var(--font-size-md);
+  --text-lg:      var(--font-size-lg);
+  --text-xl:      var(--font-size-xl);
+
+  /* Keep legacy aliases used by existing components */
+  --text-secondary: var(--font-size-sm);
+  --text-body:      var(--font-size-base);
+  --text-header:    var(--font-size-lg);
+  --text-title:     var(--font-size-xl);
+
+  /* Spacing / Sizing */
+  --spacing-toolbar:          var(--height-toolbar);
+  --spacing-statusbar:        var(--height-statusbar);
+  --spacing-control:          var(--height-control);
+  --spacing-control-compact:  var(--height-row-compact);
+  --spacing-hierarchy-row:    var(--height-row);
+  --spacing-section-header:   var(--height-section-hd);
+  --spacing-left-panel:       var(--width-left-panel);
+  --spacing-right-panel:      var(--width-right-panel);
 }

@@ -654,35 +654,43 @@ export const chairModule: ObjectDefinitionModule = {
 
   hierarchy: (params) => {
     const children: HierarchyNode[] = [
-      { id: 'seat', label: 'Seat', icon: 'box' },
+      { id: 'seat', label: 'Seat', icon: 'box', componentFamily: 'seat' },
     ];
 
     // Slat back vs Single backrest node
     if (params.backrestShape === 'Slatted') {
       const slatNodes: HierarchyNode[] = [];
       for (let i = 0; i < 5; i++) {
-        slatNodes.push({ id: `backrest_slat_${i}`, label: `Backrest Slat ${i + 1}`, icon: 'box' });
+        slatNodes.push({ 
+          id: `backrest_slat_${i}`, 
+          label: `Backrest Slat ${i + 1}`, 
+          icon: 'box',
+          componentFamily: 'backrest-slat',
+          componentRole: `slat-${i}`
+        });
       }
       children.push({
         id: 'backrest_group',
         label: 'Backrest (Slatted)',
         icon: 'list-tree',
         children: slatNodes,
+        componentFamily: 'backrest_group',
       });
     } else {
       children.push({
         id: 'backrest',
         label: 'Backrest',
         icon: 'box',
+        componentFamily: 'backrest',
       });
     }
 
     // Legs group
     const legNodes: HierarchyNode[] = [
-      { id: 'leg_fl', label: 'Front Left Leg', icon: 'cylinder' },
-      { id: 'leg_fr', label: 'Front Right Leg', icon: 'cylinder' },
-      { id: 'leg_rl', label: 'Rear Left Leg', icon: 'cylinder' },
-      { id: 'leg_rr', label: 'Rear Right Leg', icon: 'cylinder' },
+      { id: 'leg_fl', label: 'Front Left Leg', icon: 'cylinder', componentFamily: 'chair-leg', componentRole: 'front-left' },
+      { id: 'leg_fr', label: 'Front Right Leg', icon: 'cylinder', componentFamily: 'chair-leg', componentRole: 'front-right' },
+      { id: 'leg_rl', label: 'Rear Left Leg', icon: 'cylinder', componentFamily: 'chair-leg', componentRole: 'rear-left' },
+      { id: 'leg_rr', label: 'Rear Right Leg', icon: 'cylinder', componentFamily: 'chair-leg', componentRole: 'rear-right' },
     ];
 
     children.push({
@@ -690,23 +698,25 @@ export const chairModule: ObjectDefinitionModule = {
       label: 'Legs',
       icon: 'list-tree',
       children: legNodes,
+      componentFamily: 'legs_group',
     });
 
     // Armrests (present only if enabled) (REQ-CHAIR-004)
     if (params.armrestsEnabled) {
       const armNodes: HierarchyNode[] = [
-        { id: 'armrest_bar_left', label: 'Left Armrest Bar', icon: 'box' },
-        { id: 'armrest_support_rear_left', label: 'Left Rear Support', icon: 'box' },
-        { id: 'armrest_support_front_left', label: 'Left Front Support', icon: 'box' },
-        { id: 'armrest_bar_right', label: 'Right Armrest Bar', icon: 'box' },
-        { id: 'armrest_support_rear_right', label: 'Right Rear Support', icon: 'box' },
-        { id: 'armrest_support_front_right', label: 'Right Front Support', icon: 'box' },
+        { id: 'armrest_bar_left', label: 'Left Armrest Bar', icon: 'box', componentFamily: 'armrest-bar', componentRole: 'left' },
+        { id: 'armrest_support_rear_left', label: 'Left Rear Support', icon: 'box', componentFamily: 'armrest-support-rear', componentRole: 'left' },
+        { id: 'armrest_support_front_left', label: 'Left Front Support', icon: 'box', componentFamily: 'armrest-support-front', componentRole: 'left' },
+        { id: 'armrest_bar_right', label: 'Right Armrest Bar', icon: 'box', componentFamily: 'armrest-bar', componentRole: 'right' },
+        { id: 'armrest_support_rear_right', label: 'Right Rear Support', icon: 'box', componentFamily: 'armrest-support-rear', componentRole: 'right' },
+        { id: 'armrest_support_front_right', label: 'Right Front Support', icon: 'box', componentFamily: 'armrest-support-front', componentRole: 'right' },
       ];
       children.push({
         id: 'armrests_group',
         label: 'Armrests',
         icon: 'list-tree',
         children: armNodes,
+        componentFamily: 'armrests_group',
       });
     }
 

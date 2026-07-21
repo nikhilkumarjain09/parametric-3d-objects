@@ -1,201 +1,319 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Box, 
-  Cylinder, 
-  Table2, 
-  Armchair, 
-  Coffee, 
-  CupSoda, 
-  ListTree, 
-  ChevronDown, 
-  ChevronRight 
+import {
+  Box,
+  Cylinder,
+  Table2,
+  Armchair,
+  Coffee,
+  CupSoda,
+  Layers,
+  ChevronDown,
+  ChevronRight,
+  Square,
+  RectangleHorizontal,
+  Columns2,
+  PanelTop,
+  CircleDot,
+  Crosshair,
+  PanelLeft,
 } from 'lucide-react';
 import { useStore } from '../../state/store';
 import { objectRegistry } from '../../objects';
 import { HierarchyNode } from '../../objects/types';
 
-// Lucide icon mapping based on Section 10 and Section 13 node schema
+// Semantic icon mapping — human-friendly part icons
 const iconMap: Record<string, React.ComponentType<any>> = {
-  'box': Box,
-  'cylinder': Cylinder,
-  'table-2': Table2,
-  'armchair': Armchair,
-  'coffee': Coffee,
-  'cup-soda': CupSoda,
-  'list-tree': ListTree,
+  'box':          Box,
+  'cylinder':     Cylinder,
+  'table-2':      Table2,
+  'armchair':     Armchair,
+  'coffee':       Coffee,
+  'cup-soda':     CupSoda,
+  'list-tree':    Layers,
+  // Part-type overrides (matched by componentFamily when present)
+  'tabletop':     RectangleHorizontal,
+  'table-leg':    Columns2,
+  'legs_group':   Columns2,
+  'seat':         Square,
+  'backrest':     PanelTop,
+  'backrest-slat': PanelTop,
+  'backrest_group': PanelTop,
+  'armrest':      Layers,
+  'armrests_group': Layers,
+  'support_column': Cylinder,
+  'base_plate':   RectangleHorizontal,
+  'mug_handle':   CircleDot,
+  'rim':          CircleDot,
 };
 
+function getNodeIcon(node: HierarchyNode): React.ComponentType<any> {
+  // Use componentFamily for semantic icon if available
+  if (node.componentFamily && iconMap[node.componentFamily]) {
+    return iconMap[node.componentFamily];
+  }
+  if (node.id && iconMap[node.id]) return iconMap[node.id];
+  return iconMap[node.icon] || Box;
+}
+
 export default function Hierarchy() {
-  const selectedObjectType = useStore((state) => state.selectedObjectType);
-  const selectionScope = useStore((state) => state.selectionScope);
-  const setSelection = useStore((state) => state.setSelection);
+  const selectedObjectType         = useStore(s => s.selectedObjectType);
+  const selectionScope             = useStore(s => s.selectionScope);
+  const setSelection               = useStore(s => s.setSelection);
+  const editMode                   = useStore(s => s.editMode);
+  const selectedComponentIds       = useStore(s => s.selectedComponentIds);
+  const setSelectedComponentIds    = useStore(s => s.setSelectedComponentIds);
+  const activeReferenceComponentId = useStore(s => s.activeReferenceComponentId);
+  const setActiveReferenceComponentId = useStore(s => s.setActiveReferenceComponentId);
 
-  // Subscribe only to structural parameters to prevent hierarchy re-renders on slider edits (Section 25)
-  const configuration = useStore((state) => state.currentParams.configuration);
-  const backrestShape = useStore((state) => state.currentParams.backrestShape);
-  const armrestsEnabled = useStore((state) => state.currentParams.armrestsEnabled);
-  const seatShape = useStore((state) => state.currentParams.seatShape);
+  // Only subscribe to structural params (avoids re-render on slider edits)
+  const configuration   = useStore(s => s.currentParams.configuration);
+  const backrestShape   = useStore(s => s.currentParams.backrestShape);
+  const armrestsEnabled = useStore(s => s.currentParams.armrestsEnabled);
+  const seatShape       = useStore(s => s.currentParams.seatShape);
 
-  const currentParams = {
-    configuration,
-    backrestShape,
-    armrestsEnabled,
-    seatShape,
-  };
+  const currentParams = { configuration, backrestShape, armrestsEnabled, seatShape };
+  const activeModule  = objectRegistry[selectedObjectType];
 
-  const activeModule = objectRegistry[selectedObjectType];
-
-  // Track manual expand/collapse states (session scoped)
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
-  
+  const [collapsed, setCollapsed]         = useState(false);
   const lastTypeRef = useRef(selectedObjectType);
 
-  // Initialize and default all group nodes to expanded on first load (Section 5)
-  // Auto-expands newly added parent folders (e.g. enabling Armrests adds Armrests group)
+  // Auto-expand all group nodes when switching object type
   useEffect(() => {
-    if (lastTypeRef.current !== selectedObjectType) {
-      lastTypeRef.current = selectedObjectType;
-      const defaultExpanded: Record<string, boolean> = {};
+    const changed = lastTypeRef.current !== selectedObjectType;
+    lastTypeRef.current = selectedObjectType;
+    // Read current structural params inline — avoids object-reference instability in deps
+    const structParams = { configuration, backrestShape, armrestsEnabled, seatShape };
+
+    setExpandedNodes(prev => {
+      const next = changed ? {} : { ...prev };
       const traverse = (n: HierarchyNode) => {
-        if (n.children && n.children.length > 0) {
-          defaultExpanded[n.id] = true;
+        if (n.children?.length) {
+          if (changed || next[n.id] === undefined) next[n.id] = true;
           n.children.forEach(traverse);
         }
       };
-      if (activeModule) {
-        const rootNode = activeModule.hierarchy(currentParams);
-        traverse(rootNode);
-      }
-      setExpandedNodes(defaultExpanded);
-    } else {
-      // Auto expand new nodes added due to parameter edits (e.g., Six-Leg, Armrests) without reset
-      setExpandedNodes((prev) => {
-        const next = { ...prev };
-        let changed = false;
-        const traverse = (n: HierarchyNode) => {
-          if (n.children && n.children.length > 0) {
-            if (next[n.id] === undefined) {
-              next[n.id] = true;
-              changed = true;
-            }
-            n.children.forEach(traverse);
-          }
-        };
-        if (activeModule) {
-          const rootNode = activeModule.hierarchy(currentParams);
-          traverse(rootNode);
-        }
-        return changed ? next : prev;
-      });
-    }
-  }, [selectedObjectType, activeModule, currentParams]);
+      if (activeModule) traverse(activeModule.hierarchy(structParams));
+      return next;
+    });
+  // Use the five primitive values as deps, not the derived object
+  }, [selectedObjectType, activeModule, configuration, backrestShape, armrestsEnabled, seatShape]);
 
   if (!activeModule) return null;
 
   const rootNode = activeModule.hierarchy(currentParams);
 
-  const toggleNode = (nodeId: string) => {
-    setExpandedNodes((prev) => ({ ...prev, [nodeId]: !prev[nodeId] }));
+  const toggleNode = (id: string) =>
+    setExpandedNodes(p => ({ ...p, [id]: !p[id] }));
+
+  // Breadcrumb: selected part label for sub-header
+  const getSelectedLabel = (): string | null => {
+    if (editMode === 'component' && activeReferenceComponentId) {
+      const find = (n: HierarchyNode): string | null => {
+        if (n.id === activeReferenceComponentId) return n.label;
+        for (const c of n.children ?? []) {
+          const r = find(c);
+          if (r) return r;
+        }
+        return null;
+      };
+      return find(rootNode);
+    }
+    if (selectionScope.type === 'component') {
+      const find = (n: HierarchyNode): string | null => {
+        if (n.id === selectionScope.id) return n.label;
+        for (const c of n.children ?? []) {
+          const r = find(c);
+          if (r) return r;
+        }
+        return null;
+      };
+      return find(rootNode);
+    }
+    return null;
   };
 
+  const selectedLabel = getSelectedLabel();
+
   const renderNode = (node: HierarchyNode, level: number = 0): React.ReactNode => {
-    const hasChildren = node.children && node.children.length > 0;
-    const isExpanded = !!expandedNodes[node.id];
-    
-    // Node is selected if selection scope ID matches this node ID
-    const isSelected = selectionScope.id === node.id;
-    const NodeIcon = iconMap[node.icon] || Box;
+    const hasChildren = (node.children?.length ?? 0) > 0;
+    const isExpanded  = !!expandedNodes[node.id];
+
+    const isSelected = editMode === 'component'
+      ? selectedComponentIds.includes(node.id)
+      : (node.id === selectedObjectType
+          ? selectionScope.type === 'object'
+          : selectionScope.type === 'component' && selectionScope.id === node.id);
+
+    const isRef = editMode === 'component' && activeReferenceComponentId === node.id;
+    const NodeIcon = getNodeIcon(node);
+
+    // Leg-count badge value
+    let countBadge: string | null = null;
+    if (node.id === 'legs_group' || node.id === 'legs') {
+      countBadge = selectedObjectType === 'table'
+        ? (configuration === 'Six-Leg' ? '6' : (['Pedestal', 'Central Support'].includes(configuration ?? '') ? '1' : '4'))
+        : '4';
+    } else if (node.id === 'backrest_group' && selectedObjectType === 'chair' && backrestShape === 'Slatted') {
+      countBadge = '5';
+    } else if (node.id === 'armrests_group') {
+      countBadge = '2';
+    }
 
     return (
-      <div key={node.id} className="flex flex-col select-none">
-        {/* Row element (Section 5) */}
+      <div key={node.id} className="flex flex-col">
         <div
-          onClick={() => {
-            // Clicking the row body selects the node (Section 5 / REQ-COMPSEL-002)
-            if (node.id === selectedObjectType) {
-              setSelection({ type: 'object', id: node.id });
+          onClick={(e) => {
+            if (editMode === 'component') {
+              const isMulti = e.ctrlKey || e.metaKey;
+              if (isMulti) {
+                const next = selectedComponentIds.includes(node.id)
+                  ? selectedComponentIds.filter(id => id !== node.id)
+                  : [...selectedComponentIds, node.id];
+                setSelectedComponentIds(next);
+                setActiveReferenceComponentId(next.length > 0 ? node.id : null);
+              } else {
+                setSelectedComponentIds([node.id]);
+                setActiveReferenceComponentId(node.id);
+              }
             } else {
-              setSelection({ type: 'component', id: node.id });
+              setSelection({ type: node.id === selectedObjectType ? 'object' : 'component', id: node.id });
             }
           }}
-          className={`h-[28px] w-full flex items-center justify-between px-3 cursor-pointer group transition-all duration-200 ease-out border-l-2 ${
-            isSelected 
-              ? 'bg-accent-muted border-border-accent text-text-primary font-semibold' 
-              : 'border-transparent text-text-secondary hover:bg-surface-2 hover:text-text-primary'
-          }`}
-          style={{ paddingLeft: `${12 + level * 16}px` }} // 16px indentation per level (Section 5)
+          onDoubleClick={(e) => { if (hasChildren) { e.stopPropagation(); toggleNode(node.id); } }}
+          role="treeitem"
+          aria-selected={isSelected}
+          aria-expanded={hasChildren ? isExpanded : undefined}
+          style={{ paddingLeft: `${8 + level * 14}px` }}
+          className={[
+            'group h-7 w-full flex items-center justify-between pr-2 cursor-pointer select-none transition-colors duration-75 border-l-2',
+            isSelected
+              ? isRef
+                ? 'bg-accent-muted border-accent text-text-primary'
+                : 'bg-accent-muted/70 border-accent/50 text-text-primary'
+              : 'border-transparent text-text-secondary hover:bg-surface-2 hover:text-text-primary',
+          ].join(' ')}
         >
-          <div className="flex items-center gap-2 truncate flex-1 min-w-0 mr-2">
-            {/* Expansion Target (chevron click, Section 5) */}
+          <div className="flex items-center gap-1.5 min-w-0 flex-1 truncate">
+            {/* Chevron or spacer */}
             {hasChildren ? (
               <button
-                onClick={(e) => {
-                  e.stopPropagation(); // Separate chevron click from selection click (Section 5)
-                  toggleNode(node.id);
-                }}
-                className="w-4 h-4 flex items-center justify-center text-text-tertiary hover:text-text-primary focus:outline-none cursor-pointer"
+                onClick={(e) => { e.stopPropagation(); toggleNode(node.id); }}
+                className="w-4 h-4 flex items-center justify-center text-text-tertiary hover:text-text-primary cursor-pointer shrink-0 rounded"
+                aria-label={isExpanded ? 'Collapse' : 'Expand'}
               >
-                {isExpanded ? (
-                  <ChevronDown className="w-3.5 h-3.5" />
-                ) : (
-                  <ChevronRight className="w-3.5 h-3.5" />
-                )}
+                {isExpanded
+                  ? <ChevronDown className="w-3 h-3" />
+                  : <ChevronRight className="w-3 h-3" />}
               </button>
             ) : (
-              <div className="w-4" /> // Spacing matching chevron width
+              <div className="w-4 shrink-0" />
             )}
 
-            <NodeIcon className={`w-4 h-4 shrink-0 transition-colors duration-200 ${
+            <NodeIcon className={`w-3.5 h-3.5 shrink-0 transition-colors ${
               isSelected ? 'text-text-accent' : 'text-text-tertiary group-hover:text-text-secondary'
             }`} />
-            <span className="text-size-secondary font-medium truncate">{node.label}</span>
+
+            <span className="text-[12px] font-medium truncate leading-none">{node.label}</span>
           </div>
 
-          {/* Hierarchy Metadata Badges (Section 19.3) */}
-          {(node.id === 'legs_group' || node.id === 'legs') && (
-            <span className="text-[10px] font-bold text-text-tertiary bg-surface-3 px-1.5 py-0.5 rounded-sm scale-90 group-hover:bg-surface-0 transition-colors shrink-0">
-              {selectedObjectType === 'table' 
-                ? (currentParams.configuration === 'Six-Leg' ? '6' : (currentParams.configuration === 'Pedestal' || currentParams.configuration === 'Central Support' ? '1' : '4'))
-                : '4'}
-            </span>
-          )}
-          {node.id === 'backrest_group' && selectedObjectType === 'chair' && currentParams.backrestShape === 'Slatted' && (
-            <span className="text-[10px] font-bold text-text-tertiary bg-surface-3 px-1.5 py-0.5 rounded-sm scale-90 group-hover:bg-surface-0 transition-colors shrink-0">
-              5
-            </span>
-          )}
-          {node.id === 'armrests_group' && (
-            <span className="text-[10px] font-bold text-text-tertiary bg-surface-3 px-1.5 py-0.5 rounded-sm scale-90 group-hover:bg-surface-0 transition-colors shrink-0">
-              2
-            </span>
-          )}
+          {/* Right badges */}
+          <div className="flex items-center gap-1 shrink-0">
+            {isRef && (
+              <span className="text-[9px] font-bold text-text-accent bg-accent-muted border border-accent/25 px-1 py-0.5 rounded uppercase tracking-wider">
+                Ref
+              </span>
+            )}
+            {countBadge && (
+              <span className="text-[9px] font-bold text-text-tertiary bg-surface-3 px-1 py-0.5 rounded">
+                {countBadge}
+              </span>
+            )}
+            {/* Frame action — revealed on hover */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                // Select and frame
+                setSelection({ type: 'component', id: node.id });
+                useStore.getState().triggerFrameSelected();
+              }}
+              data-tooltip="Frame (F)"
+              aria-label="Frame this part"
+              className="w-5 h-5 opacity-0 group-hover:opacity-100 flex items-center justify-center text-text-tertiary hover:text-text-accent transition-opacity cursor-pointer rounded"
+            >
+              <Crosshair className="w-3 h-3" />
+            </button>
+          </div>
         </div>
 
-        {/* Child Group Nodes */}
         {hasChildren && isExpanded && (
           <div className="flex flex-col">
-            {node.children!.map((child) => renderNode(child, level + 1))}
+            {node.children!.map(child => renderNode(child, level + 1))}
           </div>
         )}
       </div>
     );
   };
 
+  // Collapsed state — just a thin strip with expand button
+  if (collapsed) {
+    return (
+      <aside className="w-8 h-full bg-surface-1 border-r border-border-subtle flex flex-col items-center py-2 z-10 shrink-0">
+        <button
+          onClick={() => setCollapsed(false)}
+          data-tooltip="Open Scene panel"
+          aria-label="Open Scene"
+          className="w-6 h-6 flex items-center justify-center text-text-tertiary hover:text-text-primary hover:bg-surface-2 rounded cursor-pointer transition-colors"
+        >
+          <PanelLeft className="w-3.5 h-3.5" />
+        </button>
+      </aside>
+    );
+  }
+
   return (
-    <aside className="w-[280px] h-full bg-surface-1 border-r border-border-subtle flex flex-col text-text-primary z-5">
-      {/* Hierarchy Header */}
-      <div className="h-8 px-4 flex items-center border-b border-border-subtle bg-surface-0 shrink-0">
-        <span className="text-size-micro font-bold tracking-wider text-text-tertiary uppercase">
-          SCENE HIERARCHY
-        </span>
+    <aside className="flex flex-col h-full bg-surface-1 border-r border-border-subtle z-10 shrink-0" style={{ width: 'var(--width-left-panel)' }}>
+      {/* Panel header */}
+      <div className="h-8 px-3 flex items-center justify-between border-b border-border-subtle bg-surface-0 shrink-0">
+        <div className="flex flex-col">
+          <span className="text-[10px] font-bold tracking-widest text-text-tertiary uppercase leading-none">
+            Scene
+          </span>
+          {selectedLabel && (
+            <span className="text-[10px] text-text-accent font-medium leading-none mt-0.5 truncate max-w-[180px]">
+              {activeModule.label} › {selectedLabel}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => setCollapsed(true)}
+          data-tooltip="Collapse panel"
+          aria-label="Collapse Scene panel"
+          className="w-5 h-5 flex items-center justify-center text-text-tertiary hover:text-text-primary hover:bg-surface-2 rounded cursor-pointer transition-colors"
+        >
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
       </div>
 
-      {/* Tree Row list container */}
-      <div className="flex-1 py-3 overflow-y-auto scrollbar">
+      {/* Tree */}
+      <div
+        role="tree"
+        aria-label="Object parts"
+        className="flex-1 py-1.5 overflow-y-auto"
+      >
         {renderNode(rootNode)}
       </div>
+
+      {/* Footer hint in component mode */}
+      {editMode === 'component' && (
+        <div className="border-t border-border-subtle px-3 py-2 shrink-0">
+          <p className="text-[10px] text-text-tertiary leading-relaxed">
+            Ctrl+click to multi-select parts
+          </p>
+        </div>
+      )}
     </aside>
   );
 }

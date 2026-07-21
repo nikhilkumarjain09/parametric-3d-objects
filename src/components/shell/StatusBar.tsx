@@ -1,147 +1,132 @@
 'use client';
 
 import React from 'react';
-import { AlertCircle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useStore } from '../../state/store';
 import { objectRegistry } from '../../objects';
 
 export default function StatusBar() {
-  const selectedObjectType = useStore((state) => state.selectedObjectType);
-  const currentParams = useStore((state) => state.currentParams);
-  const selectionScope = useStore((state) => state.selectionScope);
-  const activePresetId = useStore((state) => state.activePresetId);
-  const warningMessages = useStore((state) => state.warningMessages);
+  const selectedObjectType = useStore(s => s.selectedObjectType);
+  const currentParams      = useStore(s => s.currentParams);
+  const selectionScope     = useStore(s => s.selectionScope);
+  const activePresetId     = useStore(s => s.activePresetId);
+  const warningMessages    = useStore(s => s.warningMessages);
+  const editMode           = useStore(s => s.editMode);
+  const transformMode      = useStore(s => s.transformMode);
+  const selectedComponentIds = useStore(s => s.selectedComponentIds);
 
-  const activeModule = objectRegistry[selectedObjectType];
-  const objectLabel = activeModule ? activeModule.label : 'Object';
+  const activeModule  = objectRegistry[selectedObjectType];
+  const objectLabel   = activeModule?.label ?? 'Object';
 
-  // Format selection scope representation (Section 8)
-  const getSelectionText = () => {
-    if (selectionScope.type === 'object') {
-      return 'Object Root';
-    }
-    if (activeModule) {
-      const findLabel = (node: any): string | null => {
-        if (node.id === selectionScope.id) return node.label;
-        if (node.children) {
-          for (const child of node.children) {
-            const result = findLabel(child);
-            if (result) return result;
-          }
+  // Selected part label
+  const getSelectionLabel = (): string => {
+    if (editMode === 'component') {
+      if (selectedComponentIds.length === 0) return 'Nothing selected';
+      if (selectedComponentIds.length === 1) {
+        // Find human label in hierarchy
+        if (activeModule) {
+          const find = (n: any): string | null => {
+            if (n.id === selectedComponentIds[0]) return n.label;
+            for (const c of n.children ?? []) { const r = find(c); if (r) return r; }
+            return null;
+          };
+          const found = find(activeModule.hierarchy(currentParams));
+          if (found) return found;
         }
+        return selectedComponentIds[0];
+      }
+      return `${selectedComponentIds.length} parts selected`;
+    }
+    if (selectionScope.type === 'object') return objectLabel;
+    if (activeModule) {
+      const find = (n: any): string | null => {
+        if (n.id === selectionScope.id) return n.label;
+        for (const c of n.children ?? []) { const r = find(c); if (r) return r; }
         return null;
       };
-      const hierarchyRoot = activeModule.hierarchy(currentParams);
-      const matchedLabel = findLabel(hierarchyRoot);
-      if (matchedLabel) return matchedLabel;
+      const found = find(activeModule.hierarchy(currentParams));
+      if (found) return found;
     }
     return selectionScope.id;
   };
 
-  // Preset name formatting (Section 8)
-  const getPresetSuffix = () => {
+  // Preset label
+  const presetLabel = (): string => {
     if (!activePresetId || !activeModule) return '';
-    const preset = activeModule.presets.find(p => p.id === activePresetId);
-    return preset ? ` (${preset.label})` : '';
+    return activeModule.presets.find(p => p.id === activePresetId)?.label ?? '';
   };
-
-  // Bounding dimensions calculation (Section 8)
-  const getBoundingDimensionsText = () => {
-    if (!activeModule) return '';
-    const params = currentParams;
-    let w = 0;
-    let h = 0;
-    let d = 0;
-
-    switch (selectedObjectType) {
-      case 'table':
-        w = params.width ?? 1200;
-        h = params.height ?? 750;
-        d = (params.shape === 'Square' || params.shape === 'Round') ? w : (params.depth ?? 800);
-        break;
-      case 'chair':
-        w = params.seatWidth ?? 450;
-        h = Math.round(params.height ?? 900);
-        d = params.seatDepth ?? 450;
-        break;
-      case 'cup':
-        w = Math.max(params.topDiameter ?? 80, params.bottomDiameter ?? 60);
-        h = params.height ?? 100;
-        d = w;
-        break;
-      case 'mug':
-        w = params.diameter ?? 90;
-        h = params.height ?? 95;
-        d = w;
-        break;
-    }
-    return `${w} x ${h} x ${d} mm`;
-  };
-
-  // Component meshes count (Section 8)
-  const meshes = activeModule ? activeModule.deriveGeometry(currentParams) : [];
-  const componentCount = meshes.length;
-  const parameterCount = activeModule ? activeModule.paramSchema.length : 0;
 
   const warningsList = Object.values(warningMessages);
-  const hasWarning = warningsList.length > 0;
+  const hasWarning   = warningsList.length > 0;
   const activeWarning = hasWarning ? warningsList[0] : null;
 
+  const modeLabel = editMode === 'component'
+    ? (transformMode === 'translate' ? 'Move' : transformMode === 'rotate' ? 'Rotate' : 'Scale')
+    : 'Properties';
+
   return (
-    <footer className="h-[36px] w-full bg-surface-0 border-t border-border-subtle px-4 flex items-center justify-between text-size-secondary text-text-secondary select-none font-mono z-10 shrink-0">
-      {/* Left side: Object Type (with Preset) & Selection Context (Section 8) */}
-      <div className="flex items-center gap-1.5 truncate max-w-[35%]">
-        <span className="text-text-tertiary">Object:</span>
-        <span className="text-text-primary font-bold">{objectLabel}{getPresetSuffix()}</span>
-        <span className="text-text-tertiary mx-1">|</span>
-        <span className="text-text-tertiary">Selection:</span>
-        <span className="text-text-accent font-medium truncate">{getSelectionText()}</span>
+    <footer
+      className="shrink-0 h-8 w-full bg-surface-0 border-t border-border-subtle px-3 flex items-center justify-between gap-4 select-none z-10"
+      style={{ fontFamily: 'var(--font-geist-mono, monospace)', fontSize: '11px' }}
+    >
+      {/* Left: Object + selection */}
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <span className="text-text-tertiary shrink-0">Object:</span>
+        <span className="text-text-primary font-semibold truncate">{objectLabel}</span>
+        {presetLabel() && (
+          <span className="text-text-tertiary truncate hidden sm:inline">({presetLabel()})</span>
+        )}
+        <span className="text-border-strong shrink-0">·</span>
+        <span className="text-text-tertiary shrink-0">Selected:</span>
+        <span className="text-text-accent font-medium truncate">{getSelectionLabel()}</span>
       </div>
 
-      {/* Center: Dynamic warning text (Section 8) */}
-      <div className="flex-1 flex items-center justify-center px-4 max-w-[35%]">
+      {/* Center: warning or all-valid */}
+      <div className="flex-1 flex items-center justify-center min-w-0 px-2">
         {hasWarning && activeWarning ? (
-          <div className="flex items-center gap-1.5 text-warning animate-fade-in text-size-secondary">
-            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate font-semibold tracking-tight">{activeWarning}</span>
+          <div className="flex items-center gap-1.5 text-warning animate-fade-in">
+            <AlertTriangle className="w-3 h-3 shrink-0" />
+            <span className="truncate font-medium">{activeWarning}</span>
           </div>
         ) : (
-          <span className="text-text-tertiary font-light">Parameters conform to constraints</span>
+          <span className="text-text-tertiary">All values are valid</span>
         )}
       </div>
 
-      {/* Right side: Bounding Dimensions, Parameter/Component Count, Swatch Chip, and Indicator Dot (Section 8 & Section 19.3) */}
-      <div className="flex items-center gap-2 max-w-[40%] shrink-0">
-        <span className="text-text-secondary md:inline hidden">{getBoundingDimensionsText()}</span>
-        <span className="text-text-tertiary md:inline hidden">|</span>
-        
-        <span className="text-text-secondary">Params: {parameterCount}</span>
-        <span className="text-text-tertiary">/</span>
-        <span className="text-text-secondary">Components: {componentCount}</span>
-        <span className="text-text-tertiary">|</span>
+      {/* Right: mode chip + material swatch + state dot */}
+      <div className="flex items-center gap-2.5 shrink-0">
+        {/* Active mode */}
+        <div className="flex items-center gap-1">
+          <div className={`w-1.5 h-1.5 rounded-full ${editMode === 'component' ? 'bg-accent' : 'bg-text-tertiary'}`} />
+          <span className="text-text-tertiary hidden md:inline">{modeLabel}</span>
+        </div>
 
-        {/* Compact inline material/finish swatch chip (Section 19.3) */}
-        <div 
-          className="w-3.5 h-3.5 rounded-full border border-border-default shadow-inner shrink-0"
-          style={{ backgroundColor: currentParams.color || '#ffffff' }}
-          title={`Active Swatch: ${currentParams.material ?? 'None'} (${currentParams.finish ?? 'Matte'})`}
-        />
-        <span className="text-text-secondary text-size-micro uppercase font-medium md:inline hidden">
-          {currentParams.material}
-        </span>
-        
-        <span className="text-text-tertiary">|</span>
+        <span className="text-border-strong">·</span>
+
+        {/* Material swatch + label */}
+        <div className="flex items-center gap-1.5">
+          <div
+            className="w-3 h-3 rounded-full border border-border-default shadow-inner shrink-0"
+            style={{ backgroundColor: currentParams.color ?? '#888' }}
+            title={`${currentParams.material ?? ''} (${currentParams.finish ?? ''})`}
+          />
+          <span className="text-text-secondary hidden md:inline">{currentParams.material}</span>
+        </div>
+
+        <span className="text-border-strong">·</span>
+
+        {/* Validation indicator dot */}
         {hasWarning ? (
-          <div 
-            key="warning"
-            title="Active validation warning: parameter auto-clamped to satisfy limits"
-            className="w-2.5 h-2.5 rounded-full bg-warning animate-state-pulse shadow-[0_0_8px_var(--warning)]"
+          <div
+            key="warn"
+            title="A value was automatically adjusted"
+            className="w-2 h-2 rounded-full bg-warning animate-state-pulse"
           />
         ) : (
-          <div 
-            key="valid"
-            title="System state valid: all inputs satisfy geometry rules"
-            className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-state-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+          <div
+            key="ok"
+            title="All parameters are valid"
+            className="w-2 h-2 rounded-full bg-success animate-state-pulse"
           />
         )}
       </div>
