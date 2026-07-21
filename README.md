@@ -84,11 +84,12 @@ Each object type generates geometry entirely from its parameters. Changing a dim
 Parametric dimension calculation with coordinate-based component placement.
 
 - Leg height derived directly from overall height and tabletop thickness:
-  `legHeight = tableHeight - tabletopThickness`
+  $$H_{\text{leg}} = H_{\text{table}} - T_{\text{tabletop}}$$
 - Corner leg positions calculated from width, depth, inset, and leg size:
-  `x = ±(width / 2 - inset - legWidth / 2)`
-  `z = ±(depth / 2 - inset - legWidth / 2)`
-- Tapered legs use a circumscribed-radius cylinder (`radialSegments = 4`) with top and bottom radii computed from `legWidth` and `taperRatio`.
+  $$x_{\text{pos}} = \pm \left( \frac{\text{width}}{2} - \text{inset} - \frac{\text{legWidth}}{2} \right)$$
+  $$z_{\text{pos}} = \pm \left( \frac{\text{depth}}{2} - \text{inset} - \frac{\text{legWidth}}{2} \right)$$
+- Tapered legs use a circumscribed-radius cylinder with top and bottom radii:
+  $$R_{\text{top}} = \frac{\text{legWidth}}{\sqrt{2}}, \quad R_{\text{bottom}} = \frac{\text{legWidth} \times (1 - \text{taperRatio})}{\sqrt{2}}$$
 - Round and oval tabletops use `THREE.Shape.absarc` / `absellipse`; rectangular tops with corner radius use arc-connected line segments.
 - Tabletop extruded on `+Z`, then rotated `−π/2` on X so it lies flat on the ground plane.
 
@@ -97,11 +98,16 @@ Parametric dimension calculation with coordinate-based component placement.
 Parametric component positioning with trigonometric splay and pivot-based backrest rotation.
 
 - Leg length adjusted to keep the seat level regardless of splay angle:
-  `legLength = seatBottomHeight / (cos(angle) × cos(angle))`
-- Splay rotation is applied per-leg using rotation matrices, computing each leg's world-space center from its attachment corner and the tilted offset vector.
-- Backrest rotation is around a pivot at the rear seat top edge `[0, seatHeight, seatDepth / 2]`, not around the world origin. World position is derived from the local offset rotated by `backrestAngle`.
+  $$L_{\text{leg}} = \frac{H_{\text{bottom}}}{\cos^2(\theta_{\text{splay}})}$$
+- Splay rotation is applied per-leg using rotation matrices, computing each leg's world-space center:
+  $$x_{\text{world}} = x_{\text{attach}} - \frac{L_{\text{leg}}}{2} \sin(\theta_z) \cos(\theta_x)$$
+  $$y_{\text{world}} = H_{\text{bottom}} - \frac{L_{\text{leg}}}{2} \cos(\theta_z) \cos(\theta_x)$$
+  $$z_{\text{world}} = z_{\text{attach}} + \frac{L_{\text{leg}}}{2} \sin(\theta_x)$$
+- Backrest rotation is around a pivot at the rear seat top edge $P_{\text{pivot}} = [0, H_{\text{seat}}, D_{\text{seat}} / 2]$, not around the world origin. World position is derived from the local offset rotated by $\phi_{\text{recline}}$:
+  $$y_{\text{world}} = H_{\text{seat}} + \frac{H_{\text{back}}}{2} \cos(\phi) - \left(-\frac{T_{\text{back}}}{2}\right) \sin(\phi)$$
+  $$z_{\text{world}} = \frac{D_{\text{seat}}}{2} + \frac{H_{\text{back}}}{2} \sin(\phi) + \left(-\frac{T_{\text{back}}}{2}\right) \cos(\phi)$$
 - Overall height back-solved from seat height and the vertical projection of the backrest:
-  `height = seatHeight + backrestHeight × cos(backrestAngle)`
+  $$H_{\text{overall}} = H_{\text{seat}} + H_{\text{back}} \cos(\phi_{\text{recline}})$$
 - Waterfall seat uses a `quadraticCurveTo` profile extruded along the width axis.
 
 ### Cup
@@ -110,28 +116,29 @@ Surface of revolution (lathe geometry) for a hollow vessel.
 
 - A 2D profile of `THREE.Vector2` points traces the outer wall, rim, and inner wall in one closed loop.
 - `THREE.LatheGeometry` revolves this profile 360° around the Y-axis using 36 radial segments.
-- Outer wall radius at any height `y` is interpolated between `bottomRadius` and `topRadius`; body shape (Straight / Tapered / Rounded) selects linear, power-curve, or sine-modulated interpolation.
+- Outer wall radius at any height $y$ is interpolated between bottom and top radii; body shape selects linear, power-curve, or sine-modulated interpolation.
 - Inner wall radius derived by subtracting wall thickness from the outer radius at each sample:
-  `innerRadius(y) = outerRadius(y) − wallThickness`
-- Profile closes at the base `(0, baseThickness)` and the rim, producing a genuinely hollow vessel with a solid base.
+  $$R_{\text{inner}}(y) = R_{\text{outer}}(y) - T_{\text{wall}}$$
+- Profile closes at the base $(0, T_{\text{base}})$ and the rim, producing a genuinely hollow vessel with a solid base.
 
 ### Mug
 
 Identical hollow-vessel lathe body as the Cup, plus a cubic Bézier curve-swept tube handle.
 
 - Body uses the same `THREE.LatheGeometry` approach as the Cup.
-- Handle anchor points (`aTop`, `aBot`) are computed from the body radius at the vertical attach positions, so the handle stays flush with the surface when dimensions change.
-- Handle bow distance (`bow`) is proportional to handle size to maintain clearance:
-  `bow = max(15mm, handleSize × 0.6)`
-- Default and D-shape handles use `THREE.CubicBezierCurve3`; Angular handle uses a `THREE.CurvePath` of `LineCurve3` segments.
-- Handle cross-section is a circle with radius `handleThickness / 2`, swept along the path using `THREE.TubeGeometry` (40 path segments, 12 radial segments).
+- Handle anchor points are computed from the body radius at the vertical attach positions, so the handle stays flush with the surface when dimensions change.
+- Handle bow distance is proportional to handle size to maintain clearance:
+  $$\text{bow} = \max(15\text{mm}, H_{\text{size}} \times 0.6)$$
+- Default and D-shape handles use a Cubic Bézier curve:
+  $$B(t) = (1-t)^3 P_0 + 3(1-t)^2 t P_1 + 3(1-t) t^2 P_2 + t^3 P_3, \quad t \in [0, 1]$$
+- Handle cross-section is a circle with radius $R = T_{\text{handle}} / 2$, swept along the path using `THREE.TubeGeometry` (40 path segments, 12 radial segments).
 - Handle position can be shifted vertically with `handlePosition`; the center Y is clamped so both anchors remain within the mug height.
 
 ### Shared Techniques
 
-- **Constraint clamping** — `clamp(value, min, max)` applied to all parameters in `constraints()` before geometry is generated.
-- **Linear interpolation** — used for outer-wall profile sampling: `r(y) = rBot + (rTop − rBot) × t`.
-- **3D transformations** — each mesh specifies `position` and `rotation` in local space; the viewport applies component-level overrides on top.
+- **Constraint clamping** — $$v_{\text{clamped}} = \max(\min(v, v_{\text{max}}), v_{\text{min}})$$ applied to all parameters in `constraints()` before geometry is generated.
+- **Linear interpolation** — used for outer-wall profile sampling: $$R(y) = R_{\text{bot}} + (R_{\text{top}} - R_{\text{bot}}) \times t$$.
+- **3D transformations** — each mesh specifies position and rotation in local space; the viewport applies component-level overrides on top.
 - **Bounding box** — `THREE.Box3` used for camera framing on component selection.
 - **Raycasting** — `THREE.Raycaster` used for clicking 3D components in the viewport.
 

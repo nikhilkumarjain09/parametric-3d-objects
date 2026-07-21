@@ -17,59 +17,49 @@ All geometry is produced by the `deriveGeometry` function inside each object's d
 - Extruded 2D shape for the tabletop
 - Circumscribed-radius cylinder for tapered legs
 
-### Tabletop
+### Tabletop Height & Placement
 
-The tabletop is a `THREE.Shape` extruded along `+Z` by `thickness`, then rotated `−π/2` on X so it lies flat:
+The tabletop is a `THREE.Shape` extruded along $+Z$ by $T_{\text{tabletop}}$, then rotated $-\pi/2$ on the X-axis so it grows vertically upward in world space.
 
-| Shape | Method |
-|-------|--------|
-| Rectangular / Square | `lineTo` + `absarc` for rounded corners |
-| Round | `absarc(0, 0, radius, 0, 2π)` |
-| Oval | `absellipse(0, 0, w/2, d/2, 0, 2π)` |
+To sit flush on top of the legs, the bottom face of the tabletop is positioned at:
 
-Tabletop bottom face positioned at:
-
-```
-position.y = tableHeight − tabletopThickness
-```
+$$Y_{\text{tabletop}} = H_{\text{table}} - T_{\text{tabletop}}$$
 
 ### Leg Height
 
-```
-legHeight = tableHeight − tabletopThickness
-```
+The height of all legs is derived dynamically from overall table height and tabletop thickness:
 
-The legs sit beneath the tabletop. Their height is always derived, never set independently.
+$$H_{\text{leg}} = H_{\text{table}} - T_{\text{tabletop}}$$
 
 ### Leg Positions (Four-Leg / Six-Leg)
 
-Each corner leg X/Z position is computed symmetrically from the table footprint:
+Each corner leg's X/Z center position is computed symmetrically from the table footprint:
 
-```
-posX = width / 2 − inset − legWidth / 2
-posZ = depth / 2 − inset − legWidth / 2
-```
+$$x_{\text{pos}} = \pm \left( \frac{W_{\text{table}}}{2} - \text{inset} - \frac{W_{\text{leg}}}{2} \right)$$
 
-Leg centers are placed at `±posX, ±posZ`. Changing table width or depth repositions legs — it does not scale them.
+$$z_{\text{pos}} = \pm \left( \frac{D_{\text{table}}}{2} - \text{inset} - \frac{W_{\text{leg}}}{2} \right)$$
 
-### Tapered Legs
+For the **Six-Leg** configuration, the middle two legs are placed at:
 
-A `CylinderGeometry` with 4 radial segments forms a square prism. Top and bottom radii are derived from `legWidth` and `taperRatio`:
+$$p_{\text{mid}} = [\pm posX, \, \frac{H_{\text{leg}}}{2}, \, 0]^T$$
 
-```
-radiusTop    = legWidth / √2
-radiusBottom = legWidth × (1 − taperRatio) / √2
-```
+### Tapered Legs (Circumscribing Square Cylinder)
 
-The `/ √2` converts the square leg half-diagonal into the cylinder's circumscribed radius so the faces align with the X/Z axes after a 45° Y rotation.
+A `CylinderGeometry` with 4 radial segments forms a square prism. To align the side faces with the X/Z axes of the table, a rotation of $45^\circ$ ($\frac{\pi}{4}$ radians) is applied. 
 
-### Constraint Clamping
+The top and bottom radii are derived from `legWidth` and `taperRatio` to circumscribe the square footprint:
 
-```
-inset ≤ (width − 2 × legWidth − 40) / 2
-```
+$$R_{\text{top}} = \frac{W_{\text{leg}}}{\sqrt{2}}$$
 
-This enforces a minimum 40 mm inner clearance between opposing leg faces.
+$$R_{\text{bottom}} = \frac{W_{\text{leg}} \times (1 - t_{\text{ratio}})}{\sqrt{2}}$$
+
+### Clearance Constraint
+
+To prevent leg overlapping, the inset is dynamically constrained relative to table size and leg width:
+
+$$\text{inset} \le \min \left( \frac{W_{\text{table}} - 2 W_{\text{leg}} - 40}{2}, \, \frac{D_{\text{table}} - 2 W_{\text{leg}} - 40}{2} \right)$$
+
+This guarantees at least a $40\text{ mm}$ inner span between opposing legs.
 
 ---
 
@@ -84,52 +74,39 @@ This enforces a minimum 40 mm inner clearance between opposing leg faces.
 - Pivot-based backrest rotation
 - Back-solved overall height
 
-### Leg Splay
+### Trigonometric Leg Splay (Level-Ground Compensation)
 
-Each leg is tilted outward by `legAngle` degrees. To keep the seat bottom at the correct height despite the tilt, leg length is extended:
+Each leg is splayed outward by $\theta_{\text{splay}}$ on both X and Z axes. To keep the seat bottom at the exact target height $H_{\text{bottom}} = H_{\text{seat}} - T_{\text{seat}}$ without letting the splayed legs lift the chair, the leg length $L_{\text{leg}}$ is scaled up:
 
-```
-legLength = seatBottomHeight / (cos(legAngle) × cos(legAngle))
-```
+$$L_{\text{leg}} = \frac{H_{\text{bottom}}}{\cos^2(\theta_{\text{splay}})}$$
 
-The world-space center of each tilted leg is then derived from the rotation:
+The world-space center of each splayed leg is computed by applying rotation matrices, pivoting the tilted leg vector $[0, -\frac{L_{\text{leg}}}{2}, 0]^T$ from the attachment corners:
 
-```
-worldX = attachX + (−legLength/2) × sin(rotZ) × cos(rotX)
-worldY = attachY + (−legLength/2) × cos(rotZ) × cos(rotX)
-worldZ = attachZ − (−legLength/2) × sin(rotX)
-```
+$$x_{\text{world}} = x_{\text{attach}} - \frac{L_{\text{leg}}}{2} \sin(\theta_z) \cos(\theta_x)$$
 
-The top of each leg stays pinned to its seat corner; only the lower end swings outward.
+$$y_{\text{world}} = H_{\text{bottom}} - \frac{L_{\text{leg}}}{2} \cos(\theta_z) \cos(\theta_x)$$
 
-### Backrest Pivot
+$$z_{\text{world}} = z_{\text{attach}} + \frac{L_{\text{leg}}}{2} \sin(\theta_x)$$
 
-The backrest rotates around a pivot at the rear top edge of the seat:
+Where splay angles $\theta_x$ and $\theta_z$ are matched to the corner direction (e.g. front-left leg splay tilts in $-\theta_x$ and $+\theta_z$).
 
-```
-pivot = [0, seatHeight, seatDepth / 2]
-```
+### Backrest Pivot Rotation
 
-Its world center is computed by rotating the local offset `(bh/2, −bt/2)` by `backrestAngle`:
+The backrest rotates by recline angle $\phi$ around a pivot line located at the rear seat top edge:
 
-```
-worldY = pivotY + (bh/2) × cos(angle) − (−bt/2) × sin(angle)
-worldZ = pivotZ + (bh/2) × sin(angle) + (−bt/2) × cos(angle)
-```
+$$\vec{P}_{\text{pivot}} = \left[ 0, \, H_{\text{seat}}, \, \frac{D_{\text{seat}}}{2} \right]^T$$
 
-This means the front face of the backrest always meets the pivot line regardless of angle.
+To keep the front face of the backrest flush with the pivot line, the backrest center is shifted by local offset $(y_{\text{local}}, z_{\text{local}}) = (\frac{H_{\text{back}}}{2}, -\frac{T_{\text{back}}}{2})$ rotated by recline angle $\phi$ around the X-axis:
+
+$$y_{\text{world}} = H_{\text{seat}} + \frac{H_{\text{back}}}{2} \cos(\phi) - \left(-\frac{T_{\text{back}}}{2}\right) \sin(\phi)$$
+
+$$z_{\text{world}} = \frac{D_{\text{seat}}}{2} + \frac{H_{\text{back}}}{2} \sin(\phi) + \left(-\frac{T_{\text{back}}}{2}\right) \cos(\phi)$$
 
 ### Overall Height
 
-Back-solved from seat height and the Y-projection of the backrest:
+The overall height is back-solved from the seat height and the vertical projection of the reclined backrest:
 
-```
-height = seatHeight + backrestHeight × cos(backrestAngle)
-```
-
-### Waterfall Seat
-
-A `quadraticCurveTo` 2D profile (in the YZ plane) is extruded along the X axis to produce the ergonomic front drop.
+$$H_{\text{overall}} = H_{\text{seat}} + H_{\text{back}} \cos(\phi)$$
 
 ---
 
@@ -139,41 +116,29 @@ A `quadraticCurveTo` 2D profile (in the YZ plane) is extruded along the X axis t
 
 ### Main Technique: Surface of Revolution (Lathe Geometry)
 
-A 2D array of `THREE.Vector2(radius, y)` points describes the cup's cross-section profile. `THREE.LatheGeometry` revolves this profile 360° around the Y-axis with 36 radial segments, producing the cup body as a single mesh.
+A 2D array of profile points $\vec{P}_i = (x_i, y_i)$ is revolved $360^\circ$ around the Y-axis to form the cup body. For any angle $\theta \in [0, 2\pi]$, a profile point $(R, y)$ maps to 3D space:
 
-### Profile Construction
+$$x(\theta, y) = R(y) \cos(\theta)$$
 
-The profile is traced in one closed loop:
+$$z(\theta, y) = R(y) \sin(\theta)$$
 
-1. **Base outer edge** — `(rBottom, 0)` through `(0, 0)`
-2. **Outer wall** — `steps = 30` sample points from `y = 0` to `y = height`
-3. **Rim** — flat, rounded (semicircular arc), or flared depending on `rimStyle`
-4. **Inner wall** — 30 sample points traced downward from `y = height` to `y = baseThickness`
-5. **Base inner center** — `(0, baseThickness)`, closing the loop
+### Outer Profile Interpolation
 
-### Outer Radius Interpolation
+The outer radius $R(y)$ at any height $y \in [0, H]$ is calculated by interpolating between the bottom radius $R_{\text{bot}}$ and top radius $R_{\text{top}}$:
 
-Outer radius at height `y` uses one of three profiles controlled by the `shape` parameter:
+| Shape Mode | Interpolation Equation |
+| :--- | :--- |
+| **Straight** | $R_{\text{outer}}(y) = R_{\text{bot}} + (R_{\text{top}} - R_{\text{bot}}) \times \left(\frac{y}{H}\right)$ |
+| **Tapered** | $R_{\text{outer}}(y) = R_{\text{bot}} + (R_{\text{top}} - R_{\text{bot}}) \times \left(\frac{y}{H}\right)^2$ |
+| **Rounded** | $R_{\text{outer}}(y) = R_{\text{bot}} + (R_{\text{top}} - R_{\text{bot}}) \times \left(\frac{y}{H}\right) + 0.015 \sin\left(\frac{y}{H} \pi\right)$ |
 
-| Shape | Formula |
-|-------|---------|
-| Straight | `r(y) = rBot + (rTop − rBot) × (y / h)` |
-| Tapered | `r(y) = rBot + (rTop − rBot) × (y / h)²` |
-| Rounded | `r(y) = rBot + (rTop − rBot) × (y / h) + 0.015 × sin((y / h) × π)` |
+### Inner Wall Cavity
 
-### Inner Wall
+The inner profile is shifted inward by the wall thickness parameter $T_{\text{wall}}$ relative to the outer profile:
 
-The inner radius at each sample is derived by subtracting `wallThickness` from the outer radius at the same height:
+$$R_{\text{inner}}(y) = R_{\text{outer}}(y) - T_{\text{wall}}$$
 
-```
-innerRadius(y) = outerRadius(y) − wallThickness
-```
-
-This ensures the wall thickness is real geometry, not a visual approximation.
-
-### Hollow Vessel Result
-
-Because the profile includes both the outer wall (ascending) and the inner wall (descending), the single `LatheGeometry` produces a mesh with a genuine cavity and a solid base of `baseThickness`.
+Tracing this inner profile from $y = H$ down to the base thickness $y = T_{\text{base}}$ creates a double-walled hollow cavity with a solid base.
 
 ---
 
@@ -183,116 +148,77 @@ Because the profile includes both the outer wall (ascending) and the inner wall 
 
 ### Main Techniques
 
-- Surface of revolution for the hollow body (identical to Cup)
+- Surface of revolution for the hollow body (reusing Cup's Lathe logic)
 - Cubic Bézier curve for the handle path
 - Tube geometry swept along the handle curve
 
-### Mug Body
+### Handle Anchor Heights
 
-Reuses the same closed-profile lathe approach as the Cup. The outer profile for the mug body is a cylinder with optional shape variants:
+The vertical heights of the top and bottom handle attachments are centered on the mug wall and shifted by `handlePosition` offset:
 
-| Shape | Formula |
-|-------|---------|
-| Straight | `r(y) = rOuter` (constant) |
-| Tapered | `r(y) = rOuter + rOuter × 0.15 × (y / h)²` |
-| Rounded | `r(y) = rOuter + 0.008 × sin((y / h) × π)` |
+$$Y_{\text{center}} = T_{\text{base}} + \frac{H - T_{\text{base}}}{2} + \text{position}_{\text{handle}}$$
 
-### Handle Anchor Positions
+$$y_{\text{top}} = Y_{\text{center}} + \frac{H_{\text{handle}}}{2}$$
 
-Top and bottom handle attachment heights are computed from the handle center and size:
+$$y_{\text{bottom}} = Y_{\text{center}} - \frac{H_{\text{handle}}}{2}$$
 
-```
-wallCenter = baseThickness + (height − baseThickness) / 2
-yCenter    = wallCenter + handlePosition
-yTop       = yCenter + handleSize / 2
-yBot       = yCenter − handleSize / 2
-```
+The radial anchor points $\vec{a}_{\text{top}}$ and $\vec{a}_{\text{bottom}}$ sit on the outer surface (offset inward by $1.5\text{ mm}$ to ensure a clean connection overlap):
 
-The body surface radius at each anchor height is evaluated using `getOuterRadiusAt(y)`, so the handle origin sits exactly on the body surface even when dimensions change.
+$$\vec{a}_{\text{top}} = \left[ R_{\text{outer}}(y_{\text{top}}) - 0.0015, \quad y_{\text{top}}, \quad 0 \right]^T$$
 
-### Handle Path
+$$\vec{a}_{\text{bottom}} = \left[ R_{\text{outer}}(y_{\text{bottom}}) - 0.0015, \quad y_{\text{bottom}}, \quad 0 \right]^T$$
 
-The bow distance sets how far the handle extends from the body:
+### Cubic Bézier Handle Curve
 
-```
-bow = max(0.015 m, handleSize × 0.6)
-```
+For standard rounded handles, a `CubicBezierCurve3` is constructed with two control points extended outward by the handle bulge distance $d_{\text{bow}}$:
 
-| Handle Shape | Curve Type |
-|---|---|
-| Rounded (default) | `THREE.CubicBezierCurve3(aTop, cTop, cBot, aBot)` |
-| D-Shape | `THREE.CubicBezierCurve3(aTop, p2, p3, aBot)` with tighter control points |
-| Angular | `THREE.CurvePath` of three `LineCurve3` segments |
+$$d_{\text{bow}} = \max\left( 0.015\text{ m}, \quad H_{\text{handle}} \times 0.6 \right)$$
 
-### Handle Tube Sweep
+$$\vec{c}_{\text{top}} = \left[ R_{\text{outer}}(y_{\text{top}}) + d_{\text{bow}}, \quad y_{\text{top}}, \quad 0 \right]^T$$
 
-`THREE.TubeGeometry` sweeps a circular cross-section along the handle curve:
+$$\vec{c}_{\text{bottom}} = \left[ R_{\text{outer}}(y_{\text{bottom}}) + d_{\text{bow}}, \quad y_{\text{bottom}}, \quad 0 \right]^T$$
 
-```
-radius = handleThickness / 2
-segments = 40 (path), radialSegments = 12 (cross-section)
-```
+The curve path $\vec{B}(t)$ for $t \in [0, 1]$ is:
+
+$$\vec{B}(t) = (1-t)^3 \vec{a}_{\text{top}} + 3(1-t)^2 t \, \vec{c}_{\text{top}} + 3(1-t) t^2 \, \vec{c}_{\text{bottom}} + t^3 \vec{a}_{\text{bottom}}$$
+
+A tube of radius $R = T_{\text{handle}} / 2$ is swept along $\vec{B}(t)$ to generate the 3D handle geometry.
 
 ---
 
 ## 5. Shared Algorithms
 
-### Parametric Geometry Generation
+### Parametric Function
 
-Geometry is a pure function of parameters. No component is repositioned by scaling an existing mesh:
+$$\text{Geometry} = f(\text{parameters})$$
 
-```
-Geometry = f(parameters)
-```
-
-All six `deriveGeometry` functions use a flat parameter-comparison memoization cache to avoid redundant recalculation on unchanged inputs.
+All geometry is regenerated procedurally. Changes do not scale existing meshes; they recalculate vertex coordinates.
 
 ### Constraint Clamping
 
-Every parameter is clamped before geometry is computed:
+$$v_{\text{clamped}} = \max\left( v_{\text{min}}, \, \min(v_{\text{max}}, \, v) \right)$$
 
-```
-clamp(value, min, max) = Math.max(min, Math.min(max, value))
-```
+Every parameter input is validated through clamping. Dependent parameters are resolved sequentially (e.g., $T_{\text{wall}}$ clamps to less than half the top/bottom diameter).
 
-Dependent constraints are applied in sequence — for example, `wallThickness` is re-clamped after `diameter` changes to prevent self-intersection.
+### Linear Interpolation (LERP)
 
-### Linear Interpolation
+Used to transition radii and shapes across profiles:
 
-Used in outer-wall profile sampling and tapered geometry:
+$$\text{lerp}(a, b, t) = a + (b - a) \times t, \quad t \in [0, 1]$$
 
-```
-value = start + (end − start) × t,   t ∈ [0, 1]
-```
+### 3D Spatial Transforms
 
-### 3D Transformations
+Local coordinates map to world space using standard translation ($T$), rotation ($R$), and scaling ($S$) matrices:
 
-Each generated mesh carries `position: [x, y, z]` and `rotation: [rx, ry, rz]` in local object space. The viewport renders these directly, and component-mode overrides are added on top of them by the Zustand store.
-
-### Bounding Boxes
-
-`THREE.Box3` is used by the camera controller to frame a selected component after the user presses **F** (frame selection). The box is computed from the live scene group.
-
-### Raycasting
-
-`THREE.Raycaster` (via React Three Fiber pointer events) resolves which mesh the user clicked, maps it to a component ID in the hierarchy, and updates the Zustand selection state.
+$$\vec{P}_{\text{world}} = M_{\text{object}} \vec{P}_{\text{local}} = T(x,y,z) \cdot R(\theta_x, \theta_y, \theta_z) \cdot S(s_x, s_y, s_z) \vec{P}_{\text{local}}$$
 
 ---
 
 ## 6. Algorithm Summary
 
-| Object | Primary Algorithms |
-|--------|-------------------|
-| Table  | Parametric dimensions, extruded 2D shape, coordinate leg placement, circumscribed-radius taper |
-| Chair  | Trigonometric splay, rotation-matrix leg positioning, pivot-based backrest rotation, back-solved height |
-| Cup    | Surface of revolution (lathe), closed outer+inner profile, interpolated wall radius |
-| Mug    | Surface of revolution (lathe), cubic Bézier handle path, tube sweep |
-
-| Shared System | Technique |
-|---|---|
-| Validation    | Constraint clamping (`Math.max` / `Math.min`) |
-| Memoization   | Shallow parameter-key comparison cache |
-| Profiles      | Linear and power-curve interpolation |
-| Selection     | Raycasting via R3F pointer events |
-| Alignment     | `THREE.Box3` bounding boxes |
-| Editing       | Local-space position + rotation per mesh, Zustand override layer |
+| Object | Primary Algorithms | Mathematical Representation |
+| :--- | :--- | :--- |
+| **Table** | Symmetric placement, circumscribed taper | $$x = \pm (W/2 - \text{inset} - W_{\text{leg}}/2)$$ |
+| **Chair** | Splay correction, pivot rotation | $$L_{\text{leg}} = H_{\text{bottom}} / \cos^2(\theta)$$ |
+| **Cup** | Surface of revolution, profile offsetting | $$R_{\text{inner}}(y) = R_{\text{outer}}(y) - T_{\text{wall}}$$ |
+| **Mug** | Lathe profile, cubic Bézier sweep | $$B(t) = (1-t)^3 A + 3(1-t)^2 t C_1 + 3(1-t)t^2 C_2 + t^3 B$$ |
