@@ -60,6 +60,13 @@ export default function Viewport() {
               />
             )}
             
+            {mesh.geometry.type === 'lathe' && (
+              <latheGeometry 
+                key={mesh.id + '-' + JSON.stringify(mesh.geometry.points)} 
+                args={[mesh.geometry.points, mesh.geometry.segments ?? 32]} 
+              />
+            )}
+            
             <meshStandardMaterial
               color={mesh.material.color || '#ffffff'}
               roughness={mesh.material.roughness ?? 0.5}
