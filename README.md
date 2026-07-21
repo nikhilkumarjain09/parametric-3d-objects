@@ -136,3 +136,18 @@ Identical hollow-vessel lathe body as the Cup, plus a cubic Bézier curve-swept 
 - **Raycasting** — `THREE.Raycaster` used for clicking 3D components in the viewport.
 
 > See [`ALGORITHMS.md`](./ALGORITHMS.md) for a concise reference of the geometry and mathematical techniques used by each object generator.
+
+---
+
+## Vercel CI/CD Deployment
+
+The repository includes a GitHub Actions workflow under `.github/workflows/vercel.yml` to automatically trigger deployments to Vercel on pushes and pull requests.
+
+### Configuration
+
+To enable the pipeline, configure the following secrets inside your GitHub repository settings under **Settings > Secrets and variables > Actions**:
+
+1. **`VERCEL_TOKEN`** — Your personal Vercel access token. Create one in your [Vercel account tokens page](https://vercel.com/account/tokens).
+2. **`VERCEL_ORG_ID`** — Your Vercel Team or User ID. Can be retrieved by running `vercel login` and checking your organization profile.
+3. **`VERCEL_PROJECT_ID`** — The ID of the Vercel project linked to this repository. Can be found in the project's dashboard settings.
+
