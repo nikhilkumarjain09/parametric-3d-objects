@@ -15,7 +15,9 @@ import {
   Box, 
   RotateCcw, 
   Shuffle,
-  HelpCircle
+  HelpCircle,
+  ListTree,
+  Sliders
 } from 'lucide-react';
 import { useStore } from '../../state/store';
 import { objectList, ObjectDefinitionModule } from '../../objects';
@@ -42,10 +44,24 @@ export default function Toolbar() {
   const resetObject = useStore((state) => state.resetObject);
   const randomizeObject = useStore((state) => state.randomizeObject);
 
+  const hierarchyDrawerOpen = useStore((state) => state.hierarchyDrawerOpen);
+  const setHierarchyDrawerOpen = useStore((state) => state.setHierarchyDrawerOpen);
+  const inspectorDrawerOpen = useStore((state) => state.inspectorDrawerOpen);
+  const setInspectorDrawerOpen = useStore((state) => state.setInspectorDrawerOpen);
+  const setActiveMobileTab = useStore((state) => state.setActiveMobileTab);
+
+  const [width, setWidth] = useState<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setWidth(window.innerWidth);
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const activeModule = objectList.find(o => o.id === selectedObjectType) || objectList[0];
   const ActiveIcon = iconMap[activeModule.icon] || Table2;
@@ -240,6 +256,28 @@ export default function Toolbar() {
             </div>
           )}
         </div>
+
+        {/* Toggle Hierarchy button for mobile/tablet drawers (Section 16) */}
+        {width && width < 1024 && (
+          <button
+            onClick={() => {
+              if (width < 768) {
+                setActiveMobileTab('hierarchy');
+                setHierarchyDrawerOpen(!hierarchyDrawerOpen);
+              } else {
+                setHierarchyDrawerOpen(!hierarchyDrawerOpen);
+              }
+            }}
+            title="Toggle Scene Hierarchy"
+            className={`w-8 h-8 rounded-sm flex items-center justify-center border transition-all cursor-pointer ${
+              hierarchyDrawerOpen 
+                ? 'bg-surface-2 border-border-strong text-text-accent font-bold shadow' 
+                : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-surface-2'
+            }`}
+          >
+            <ListTree className="w-4.5 h-4.5" />
+          </button>
+        )}
       </div>
 
       {/* Middle: Viewport controls (Section 3 & 4 & 6) */}
@@ -322,6 +360,27 @@ export default function Toolbar() {
 
       {/* Right: Reset & Randomize actions (Section 3) */}
       <div className="flex items-center gap-2">
+        {/* Toggle Inspector button for mobile/tablet drawers (Section 16) */}
+        {width && width < 1024 && (
+          <button
+            onClick={() => {
+              if (width < 768) {
+                setActiveMobileTab('inspector');
+                setInspectorDrawerOpen(!inspectorDrawerOpen);
+              } else {
+                setInspectorDrawerOpen(!inspectorDrawerOpen);
+              }
+            }}
+            title="Toggle Inspector"
+            className={`w-8 h-8 rounded-sm flex items-center justify-center border transition-all cursor-pointer mr-1 ${
+              inspectorDrawerOpen 
+                ? 'bg-surface-2 border-border-strong text-text-accent font-bold shadow' 
+                : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-surface-2'
+            }`}
+          >
+            <Sliders className="w-4.5 h-4.5" />
+          </button>
+        )}
         <button
           onClick={resetObject}
           className="flex items-center gap-1.5 px-3 h-8 rounded-sm bg-surface-1 border border-border-default hover:bg-surface-2 text-size-secondary font-medium text-text-secondary cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-1 focus:ring-accent"

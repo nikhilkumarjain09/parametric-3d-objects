@@ -20,6 +20,11 @@ interface AppState {
   cameraAction: 'none' | 'frame-selected' | 'reset-view';
   cameraActionId: number; // Incremented to notify canvas ref changes
 
+  // Responsive Drawer States (Section 16)
+  hierarchyDrawerOpen: boolean;
+  inspectorDrawerOpen: boolean;
+  activeMobileTab: 'hierarchy' | 'inspector';
+
   // Actions
   setSelectedObjectType: (type: string) => void;
   updateParam: (paramId: string, value: any) => void;
@@ -36,6 +41,11 @@ interface AppState {
   triggerFrameSelected: () => void;
   triggerResetView: () => void;
   clearCameraAction: () => void;
+
+  // Drawer Actions
+  setHierarchyDrawerOpen: (open: boolean) => void;
+  setInspectorDrawerOpen: (open: boolean) => void;
+  setActiveMobileTab: (tab: 'hierarchy' | 'inspector') => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -52,6 +62,11 @@ export const useStore = create<AppState>((set, get) => ({
   cameraAction: 'none',
   cameraActionId: 0,
 
+  // Responsive Drawer States Defaults
+  hierarchyDrawerOpen: false,
+  inspectorDrawerOpen: false,
+  activeMobileTab: 'hierarchy',
+
   setSelectedObjectType: (type) => {
     const module = objectRegistry[type];
     if (!module) return;
@@ -65,6 +80,9 @@ export const useStore = create<AppState>((set, get) => ({
       warningMessages: {},
       cameraAction: 'reset-view',
       cameraActionId: get().cameraActionId + 1,
+      // Auto close drawers on object change for better usability
+      hierarchyDrawerOpen: false,
+      inspectorDrawerOpen: false,
     });
   },
 
@@ -221,5 +239,26 @@ export const useStore = create<AppState>((set, get) => ({
 
   clearCameraAction: () => {
     set({ cameraAction: 'none' });
+  },
+
+  // Responsive Drawer Actions
+  setHierarchyDrawerOpen: (open) => {
+    set({ 
+      hierarchyDrawerOpen: open,
+      // Exclusive drawer focus: close inspector if hierarchy opens
+      inspectorDrawerOpen: open ? false : get().inspectorDrawerOpen
+    });
+  },
+
+  setInspectorDrawerOpen: (open) => {
+    set({ 
+      inspectorDrawerOpen: open,
+      // Exclusive drawer focus: close hierarchy if inspector opens
+      hierarchyDrawerOpen: open ? false : get().hierarchyDrawerOpen
+    });
+  },
+
+  setActiveMobileTab: (tab) => {
+    set({ activeMobileTab: tab });
   },
 }));

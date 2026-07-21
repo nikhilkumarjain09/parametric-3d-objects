@@ -7,7 +7,9 @@ import { objectRegistry } from '../../objects';
 
 export default function StatusBar() {
   const selectedObjectType = useStore((state) => state.selectedObjectType);
+  const currentParams = useStore((state) => state.currentParams);
   const selectionScope = useStore((state) => state.selectionScope);
+  const activePresetId = useStore((state) => state.activePresetId);
   const warningMessages = useStore((state) => state.warningMessages);
 
   const activeModule = objectRegistry[selectedObjectType];
@@ -18,9 +20,7 @@ export default function StatusBar() {
     if (selectionScope.type === 'object') {
       return 'Object Root';
     }
-    // Return formatted label if selection matches a known subcomponent
     if (activeModule) {
-      // Find matching node label in hierarchy
       const findLabel = (node: any): string | null => {
         if (node.id === selectionScope.id) return node.label;
         if (node.children) {
@@ -31,32 +31,74 @@ export default function StatusBar() {
         }
         return null;
       };
-      // We pass in dummy params to search hierarchical structure
-      const hierarchyRoot = activeModule.hierarchy({});
+      const hierarchyRoot = activeModule.hierarchy(currentParams);
       const matchedLabel = findLabel(hierarchyRoot);
       if (matchedLabel) return matchedLabel;
     }
     return selectionScope.id;
   };
 
-  // Extract first active warning text (Section 8)
+  // Preset name formatting (Section 8)
+  const getPresetSuffix = () => {
+    if (!activePresetId || !activeModule) return '';
+    const preset = activeModule.presets.find(p => p.id === activePresetId);
+    return preset ? ` (${preset.label})` : '';
+  };
+
+  // Bounding dimensions calculation (Section 8)
+  const getBoundingDimensionsText = () => {
+    if (!activeModule) return '';
+    const params = currentParams;
+    let w = 0;
+    let h = 0;
+    let d = 0;
+
+    switch (selectedObjectType) {
+      case 'table':
+        w = params.width ?? 1200;
+        h = params.height ?? 750;
+        d = (params.shape === 'Square' || params.shape === 'Round') ? w : (params.depth ?? 800);
+        break;
+      case 'chair':
+        w = params.seatWidth ?? 450;
+        h = Math.round(params.height ?? 900);
+        d = params.seatDepth ?? 450;
+        break;
+      case 'cup':
+        w = Math.max(params.topDiameter ?? 80, params.bottomDiameter ?? 60);
+        h = params.height ?? 100;
+        d = w;
+        break;
+      case 'mug':
+        w = params.diameter ?? 90;
+        h = params.height ?? 95;
+        d = w;
+        break;
+    }
+    return `${w} x ${h} x ${d} mm`;
+  };
+
+  // Component meshes count (Section 8)
+  const meshes = activeModule ? activeModule.deriveGeometry(currentParams) : [];
+  const componentCount = meshes.length;
+
   const warningsList = Object.values(warningMessages);
   const hasWarning = warningsList.length > 0;
   const activeWarning = hasWarning ? warningsList[0] : null;
 
   return (
     <footer className="h-[36px] w-full bg-surface-0 border-t border-border-subtle px-4 flex items-center justify-between text-size-secondary text-text-secondary select-none font-mono z-10 shrink-0">
-      {/* Left side: Object Type & Selection Context (Section 8) */}
-      <div className="flex items-center gap-1.5 truncate max-w-[30%]">
+      {/* Left side: Object Type (with Preset) & Selection Context (Section 8) */}
+      <div className="flex items-center gap-1.5 truncate max-w-[35%]">
         <span className="text-text-tertiary">Object:</span>
-        <span className="text-text-primary font-bold">{objectLabel}</span>
-        <span className="text-text-tertiary mx-1.5">|</span>
+        <span className="text-text-primary font-bold">{objectLabel}{getPresetSuffix()}</span>
+        <span className="text-text-tertiary mx-1">|</span>
         <span className="text-text-tertiary">Selection:</span>
         <span className="text-text-accent font-medium truncate">{getSelectionText()}</span>
       </div>
 
-      {/* Center: Dynamic validation warning message (Section 8) */}
-      <div className="flex-1 flex items-center justify-center px-4 max-w-[50%]">
+      {/* Center: Dynamic warning text (Section 8) */}
+      <div className="flex-1 flex items-center justify-center px-4 max-w-[35%]">
         {hasWarning && activeWarning ? (
           <div className="flex items-center gap-1.5 text-warning animate-fade-in text-size-secondary">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -67,8 +109,12 @@ export default function StatusBar() {
         )}
       </div>
 
-      {/* Right side: Pulse Indicator Dot (Section 8) */}
-      <div className="flex items-center gap-2 max-w-[20%] shrink-0">
+      {/* Right side: Bounding Dimensions, Component Count, and Indicator Dot (Section 8) */}
+      <div className="flex items-center gap-2 max-w-[30%] shrink-0">
+        <span className="text-text-secondary">{getBoundingDimensionsText()}</span>
+        <span className="text-text-tertiary">|</span>
+        <span className="text-text-secondary">Components: {componentCount}</span>
+        <span className="text-text-tertiary">|</span>
         <span className="text-text-tertiary text-size-micro uppercase tracking-wider font-bold">
           {hasWarning ? 'Clamped' : 'Valid'}
         </span>
