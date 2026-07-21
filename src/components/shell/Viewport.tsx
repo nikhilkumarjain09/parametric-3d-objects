@@ -720,12 +720,11 @@ function ViewportOverlayControls() {
   const shadingMode       = useStore(s => s.shadingMode);
   const boundingBoxEnabled = useStore(s => s.boundingBoxEnabled);
 
-  const btnBase = 'w-7 h-7 flex items-center justify-center rounded cursor-pointer transition-colors';
-  const btnOn   = `${btnBase} bg-accent-muted text-text-accent border border-accent/30`;
+  const btnBase = 'w-7 h-7 flex items-center justify-center rounded cursor-pointer transition-all select-none';
   const btnOff  = `${btnBase} text-text-tertiary hover:text-text-primary hover:bg-surface-2 border border-transparent`;
 
   return (
-    <div className="absolute bottom-3 right-3 flex flex-col gap-1 z-20">
+    <div className="absolute bottom-3 right-3 flex flex-col gap-1.5 z-20">
       <button
         onClick={() => useStore.getState().triggerFrameSelected()}
         data-tooltip="Frame Selection (F)"
@@ -747,7 +746,10 @@ function ViewportOverlayControls() {
         onClick={() => useStore.getState().toggleGrid()}
         data-tooltip="Grid"
         aria-label="Toggle grid"
-        className={gridEnabled ? btnOn : btnOff}
+        className={btnBase}
+        style={gridEnabled
+          ? { background: 'var(--grad-primary)', color: 'white', boxShadow: 'var(--shadow-btn)' }
+          : { color: 'var(--text-tertiary)' }}
       >
         <Grid3x3 className="w-3.5 h-3.5" />
       </button>
@@ -755,7 +757,10 @@ function ViewportOverlayControls() {
         onClick={() => useStore.getState().setShadingMode(shadingMode === 'wireframe' ? 'solid' : 'wireframe')}
         data-tooltip="Wireframe"
         aria-label="Toggle wireframe"
-        className={shadingMode === 'wireframe' ? btnOn : btnOff}
+        className={btnBase}
+        style={shadingMode === 'wireframe'
+          ? { background: 'var(--grad-primary)', color: 'white', boxShadow: 'var(--shadow-btn)' }
+          : { color: 'var(--text-tertiary)' }}
       >
         <span className="text-[9px] font-bold uppercase">W</span>
       </button>
@@ -763,7 +768,10 @@ function ViewportOverlayControls() {
         onClick={() => useStore.getState().toggleBoundingBox()}
         data-tooltip="Bounding Box"
         aria-label="Toggle bounding box"
-        className={boundingBoxEnabled ? btnOn : btnOff}
+        className={btnBase}
+        style={boundingBoxEnabled
+          ? { background: 'var(--grad-primary)', color: 'white', boxShadow: 'var(--shadow-btn)' }
+          : { color: 'var(--text-tertiary)' }}
       >
         <BoxSelect className="w-3.5 h-3.5" />
       </button>

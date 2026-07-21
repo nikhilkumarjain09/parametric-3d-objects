@@ -97,22 +97,20 @@ export default function Home() {
                   <div className="h-10 bg-surface-0 border-b border-border-subtle flex items-center p-1 gap-1 shrink-0">
                     <button
                       onClick={() => setActiveMobileTab('hierarchy')}
-                      className={`flex-1 h-full rounded text-[11px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
-                        activeMobileTab === 'hierarchy'
-                          ? 'bg-accent text-text-on-accent'
-                          : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
-                      }`}
+                      className="flex-1 h-full rounded text-[11px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+                      style={activeMobileTab === 'hierarchy'
+                        ? { background: 'var(--grad-primary)', color: 'white', boxShadow: 'var(--shadow-btn)' }
+                        : { color: 'var(--text-secondary)' }}
                     >
                       <Layers className="w-3.5 h-3.5" />
                       Scene
                     </button>
                     <button
                       onClick={() => setActiveMobileTab('inspector')}
-                      className={`flex-1 h-full rounded text-[11px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
-                        activeMobileTab === 'inspector'
-                          ? 'bg-accent text-text-on-accent'
-                          : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
-                      }`}
+                      className="flex-1 h-full rounded text-[11px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+                      style={activeMobileTab === 'inspector'
+                        ? { background: 'var(--grad-primary)', color: 'white', boxShadow: 'var(--shadow-btn)' }
+                        : { color: 'var(--text-secondary)' }}
                     >
                       <Sliders className="w-3.5 h-3.5" />
                       Inspector

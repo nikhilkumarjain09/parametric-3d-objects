@@ -186,16 +186,25 @@ export default function Hierarchy() {
           role="treeitem"
           aria-selected={isSelected}
           aria-expanded={hasChildren ? isExpanded : undefined}
-          style={{ paddingLeft: `${8 + level * 14}px` }}
+          style={{
+            paddingLeft: `${8 + level * 14}px`,
+            background: isSelected
+              ? 'linear-gradient(90deg, rgba(139,92,246,0.15) 0%, rgba(6,182,212,0.05) 100%)'
+              : undefined,
+          }}
           className={[
-            'group h-7 w-full flex items-center justify-between pr-2 cursor-pointer select-none transition-colors duration-75 border-l-2',
+            'group h-7 w-full flex items-center justify-between pr-2 cursor-pointer select-none transition-all duration-75 relative overflow-hidden',
             isSelected
-              ? isRef
-                ? 'bg-accent-muted border-accent text-text-primary'
-                : 'bg-accent-muted/70 border-accent/50 text-text-primary'
+              ? 'selected-row-bar text-text-primary'
               : 'border-transparent text-text-secondary hover:bg-surface-2 hover:text-text-primary',
           ].join(' ')}
         >
+          {isSelected && (
+            <div
+              className="absolute left-0 top-[15%] bottom-[15%] w-[2px] rounded-full"
+              style={{ background: 'var(--grad-primary)' }}
+            />
+          )}
           <div className="flex items-center gap-1.5 min-w-0 flex-1 truncate">
             {/* Chevron or spacer */}
             {hasChildren ? (
@@ -213,7 +222,7 @@ export default function Hierarchy() {
             )}
 
             <NodeIcon className={`w-3.5 h-3.5 shrink-0 transition-colors ${
-              isSelected ? 'text-text-accent' : 'text-text-tertiary group-hover:text-text-secondary'
+              isSelected ? 'text-accent-cyan' : 'text-text-tertiary group-hover:text-text-secondary'
             }`} />
 
             <span className="text-[12px] font-medium truncate leading-none">{node.label}</span>
@@ -222,7 +231,10 @@ export default function Hierarchy() {
           {/* Right badges */}
           <div className="flex items-center gap-1 shrink-0">
             {isRef && (
-              <span className="text-[9px] font-bold text-text-accent bg-accent-muted border border-accent/25 px-1 py-0.5 rounded uppercase tracking-wider">
+              <span
+                className="text-[9px] font-bold text-white px-1 py-0.5 rounded uppercase tracking-wider shadow-sm"
+                style={{ background: 'var(--grad-primary)' }}
+              >
                 Ref
               </span>
             )}
@@ -276,13 +288,13 @@ export default function Hierarchy() {
   return (
     <aside className="flex flex-col h-full bg-surface-1 border-r border-border-subtle z-10 shrink-0" style={{ width: 'var(--width-left-panel)' }}>
       {/* Panel header */}
-      <div className="h-8 px-3 flex items-center justify-between border-b border-border-subtle bg-surface-0 shrink-0">
+      <div className="h-8 px-3 flex items-center justify-between border-b border-border-subtle bg-surface-0 shrink-0 panel-header-accent">
         <div className="flex flex-col">
           <span className="text-[10px] font-bold tracking-widest text-text-tertiary uppercase leading-none">
             Scene
           </span>
           {selectedLabel && (
-            <span className="text-[10px] text-text-accent font-medium leading-none mt-0.5 truncate max-w-[180px]">
+            <span className="text-[10px] font-semibold leading-none mt-0.5 truncate max-w-[180px] text-gradient">
               {activeModule.label} › {selectedLabel}
             </span>
           )}

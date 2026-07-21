@@ -93,9 +93,17 @@ function AxisInput({ axis, value, step = 1, unit, onChange }: AxisInputProps) {
           value={local}
           step={step}
           onChange={e => setLocal(e.target.value)}
-          onBlur={commit}
           onKeyDown={e => { if (e.key === 'Enter') commit(); }}
-          className="w-full h-[26px] bg-surface-0 border border-border-default rounded px-1.5 pr-5 font-mono text-[11px] text-text-primary outline-none focus:border-border-accent transition-colors"
+          className="w-full h-[26px] bg-surface-0 border border-border-default rounded px-1.5 pr-5 font-mono text-[11px] text-text-primary outline-none focus:border-border-accent transition-all"
+          onFocus={e => {
+            e.currentTarget.style.borderColor = 'var(--accent)';
+            e.currentTarget.style.boxShadow = '0 0 0 1px rgba(139,92,246,0.15)';
+          }}
+          onBlur={e => {
+            commit();
+            e.currentTarget.style.borderColor = 'var(--border-default)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
         />
         {unit && (
           <span className="absolute right-1 text-[9px] text-text-tertiary font-mono pointer-events-none">{unit}</span>
@@ -188,7 +196,17 @@ function NumericField({ param, value, hasWarning, warningMessage, onClearWarning
               {warningMessage}
             </span>
           )}
-          <div className="flex items-center bg-surface-0 border border-border-default rounded h-[24px] px-1.5 gap-0.5 focus-within:border-border-accent transition-colors">
+          <div
+            className="flex items-center bg-surface-0 border border-border-default rounded h-[24px] px-1.5 gap-0.5 transition-all input-gradient-focus"
+            onFocus={e => {
+              e.currentTarget.style.borderColor = 'var(--accent)';
+              e.currentTarget.style.boxShadow = '0 0 0 1px rgba(139,92,246,0.15)';
+            }}
+            onBlur={e => {
+              e.currentTarget.style.borderColor = 'var(--border-default)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
             <input
               ref={inputRef}
               id={`num-${param.id}`}
@@ -214,7 +232,7 @@ function NumericField({ param, value, hasWarning, warningMessage, onClearWarning
           </button>
         </div>
       </div>
-      {/* Slider */}
+      {/* Slider — utilizes a dynamic gradient filled track */}
       <input
         type="range"
         min={param.min ?? 0}
@@ -224,7 +242,7 @@ function NumericField({ param, value, hasWarning, warningMessage, onClearWarning
         onChange={e => onChange(Number(e.target.value))}
         className="w-full cursor-pointer"
         style={{
-          background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, var(--surface-3) ${pct}%, var(--surface-3) 100%)`,
+          background: `linear-gradient(to right, var(--accent) 0%, var(--accent-cyan) ${pct}%, var(--surface-3) ${pct}%, var(--surface-3) 100%)`,
         }}
         aria-label={param.label}
       />
@@ -270,25 +288,42 @@ function DropdownField({ param, value, isOpen, setOpen, onChange }: DropdownFiel
               case 'Escape':    setOpen(false); break;
             }
           }}
-          className="w-full h-7 px-2.5 rounded bg-surface-2 border border-border-default hover:border-border-strong text-[12px] flex items-center justify-between cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-accent transition-colors"
+          className="w-full h-7 px-2.5 rounded bg-surface-2 border border-border-default hover:border-border-strong text-[12px] flex items-center justify-between cursor-pointer focus:outline-none transition-colors"
+          style={isOpen ? { borderColor: 'var(--accent)', boxShadow: '0 0 0 1px rgba(139,92,246,0.15)' } : undefined}
           aria-haspopup="listbox" aria-expanded={isOpen}
         >
           <span className="text-text-primary truncate">{value}</span>
           <ChevronDown className="w-3 h-3 text-text-tertiary shrink-0 ml-1" />
         </button>
         {isOpen && (
-          <div className="absolute top-8 left-0 w-full bg-surface-3 border border-border-strong rounded shadow-lg py-0.5 z-40 max-h-[160px] overflow-y-auto animate-panel-in">
+          <div
+            className="absolute top-8 left-0 w-full rounded shadow-lg py-0.5 z-40 max-h-[160px] overflow-y-auto animate-panel-in"
+            style={{
+              background: 'var(--surface-3)',
+              border: '1px solid var(--border-default)',
+              boxShadow: 'var(--shadow-lg), 0 0 25px rgba(139,92,246,0.1)'
+            }}
+          >
             {opts.map((opt: string, i: number) => (
               <div
                 key={opt} role="option" aria-selected={opt === value}
                 onClick={() => { onChange(opt); setOpen(false); }}
                 onMouseEnter={() => setHi(i)}
-                className={`h-7 px-2.5 flex items-center justify-between text-[12px] cursor-pointer transition-colors ${
-                  opt === value ? 'text-text-accent font-medium' : i === hi ? 'bg-surface-2 text-text-primary' : 'text-text-secondary hover:bg-surface-2 hover:text-text-primary'
-                }`}
+                className="h-7 px-2.5 flex items-center justify-between text-[12px] cursor-pointer transition-colors relative"
+                style={{
+                  background: opt === value
+                    ? 'linear-gradient(90deg, rgba(139,92,246,0.12) 0%, rgba(6,182,212,0.05) 100%)'
+                    : i === hi
+                      ? 'var(--surface-2)'
+                      : 'transparent',
+                  color: opt === value ? 'var(--text-accent)' : 'var(--text-secondary)'
+                }}
               >
+                {opt === value && (
+                  <div className="absolute left-0 top-0 bottom-0 w-0.5" style={{ background: 'var(--grad-primary)' }} />
+                )}
                 <span>{opt}</span>
-                {opt === value && <Check className="w-3 h-3 text-text-accent shrink-0" />}
+                {opt === value && <Check className="w-3 h-3 text-accent-cyan shrink-0" />}
               </div>
             ))}
           </div>
@@ -312,10 +347,19 @@ function MaterialSelector({ param, value, onChange }: { param: any; value: strin
               aria-label={opt} aria-pressed={sel}
             >
               <div
-                className={`w-10 h-10 rounded-full transition-all ${sel ? 'ring-2 ring-accent ring-offset-2 ring-offset-surface-1 scale-105' : 'border border-border-default hover:border-border-strong hover:scale-[1.04]'}`}
-                style={{ background: MATERIAL_GRADIENTS[opt] || '#888' }}
-              />
-              <span className={`text-[9px] uppercase tracking-wider font-medium transition-colors ${sel ? 'text-text-accent' : 'text-text-tertiary group-hover/sw:text-text-secondary'}`}>
+                className={`w-10 h-10 rounded-full transition-all relative ${sel ? 'scale-105 shadow-md' : 'border border-border-default hover:border-border-strong hover:scale-[1.04]'}`}
+                style={{
+                  background: MATERIAL_GRADIENTS[opt] || '#888',
+                  padding: '2px'
+                }}
+              >
+                {sel && (
+                  <div className="absolute inset-0 -m-[2px] rounded-full"
+                    style={{ background: 'var(--grad-primary)', zIndex: -1 }}
+                  />
+                )}
+              </div>
+              <span className={`text-[9px] uppercase tracking-wider font-semibold transition-colors ${sel ? 'text-gradient' : 'text-text-tertiary group-hover/sw:text-text-secondary'}`}>
                 {opt}
               </span>
             </button>
@@ -334,11 +378,23 @@ function ToggleField({ param, value, onChange }: { param: any; value: boolean; o
       onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onChange(!value); } }}
       tabIndex={0}
       role="switch" aria-checked={value}
-      className="flex items-center justify-between h-7 cursor-pointer hover:bg-surface-2 px-1 rounded transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+      className="flex items-center justify-between h-7 cursor-pointer hover:bg-surface-2 px-1 rounded transition-colors focus:outline-none"
     >
       <span className="text-[12px] text-text-secondary font-medium select-none">{param.label}</span>
-      <div className={`w-8 h-4 rounded-full border relative transition-colors ${value ? 'bg-accent border-accent' : 'bg-surface-3 border-border-default'}`}>
-        <div className={`w-3 h-3 rounded-full absolute top-[1px] transition-all ${value ? 'right-[1px] bg-white' : 'left-[1px] bg-text-tertiary'}`} />
+      <div
+        className="w-8 h-4 rounded-full relative transition-all"
+        style={{
+          background: value ? 'var(--grad-primary)' : 'var(--surface-3)',
+          border: '1px solid var(--border-default)',
+        }}
+      >
+        <div
+          className="w-2.5 h-2.5 rounded-full absolute top-[2px] transition-all shadow-sm"
+          style={{
+            left: value ? '17px' : '3px',
+            background: value ? 'white' : 'var(--text-tertiary)',
+          }}
+        />
       </div>
     </div>
   );
@@ -373,13 +429,24 @@ function ColorField({ param, value, isOpen, setOpen, onChange }: {
         <span className="text-[10px] font-mono text-text-tertiary uppercase">{value}</span>
         <button
           onClick={() => setOpen(!isOpen)}
-          className="w-6 h-6 rounded border border-border-default hover:border-border-strong cursor-pointer shadow-inner transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-accent"
-          style={{ backgroundColor: value }}
+          className="w-6 h-6 rounded cursor-pointer shadow-inner transition-all focus:outline-none"
+          style={{
+            backgroundColor: value,
+            border: isOpen ? '1.5px solid var(--accent)' : '1px solid var(--border-default)',
+            boxShadow: isOpen ? '0 0 8px rgba(139,92,246,0.3)' : 'none'
+          }}
           aria-label="Pick colour"
         />
       </div>
       {isOpen && (
-        <div ref={popRef} className="absolute right-0 top-9 w-44 bg-surface-3 border border-border-strong rounded shadow-lg p-3 z-40 flex flex-col gap-3 animate-panel-in">
+        <div ref={popRef} className="absolute right-0 top-9 w-44 p-3 z-40 flex flex-col gap-3 animate-panel-in"
+          style={{
+            background: 'var(--surface-3)',
+            border: '1px solid var(--border-default)',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-lg), 0 0 25px rgba(139,92,246,0.1)'
+          }}
+        >
           <span className="text-[9px] font-bold uppercase tracking-widest text-text-tertiary">Swatches</span>
           <div className="grid grid-cols-4 gap-1.5">
             {CURATED_COLORS.map(c => (
@@ -399,11 +466,12 @@ function ColorField({ param, value, isOpen, setOpen, onChange }: {
               <input
                 type="text" value={hex}
                 onChange={e => setHex(e.target.value)}
-                onBlur={submit}
                 onKeyDown={e => { if (e.key === 'Enter') submit(); }}
-                className="flex-1 h-6 px-1.5 bg-surface-2 border border-border-default rounded text-[11px] font-mono text-text-primary outline-none focus:border-border-accent uppercase"
+                className="flex-1 h-6 px-1.5 bg-surface-2 border border-border-default rounded text-[11px] font-mono text-text-primary outline-none uppercase"
+                onFocus={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+                onBlur={e => { submit(); e.currentTarget.style.borderColor = 'var(--border-default)'; }}
               />
-              <button onClick={submit} className="px-2 h-6 bg-surface-1 border border-border-default hover:bg-surface-2 rounded text-[10px] font-medium text-text-secondary cursor-pointer">
+              <button onClick={submit} className="px-2 h-6 bg-surface-1 border border-border-default hover:bg-surface-2 rounded text-[10px] font-semibold text-text-secondary cursor-pointer transition-colors">
                 OK
               </button>
             </div>
@@ -503,15 +571,15 @@ function ComponentTransformPanel(p: CTProps) {
   return (
     <div className="flex flex-col flex-1 overflow-y-auto">
       {/* Parts mode header */}
-      <div className="px-3 py-2.5 border-b border-border-subtle bg-surface-0 shrink-0">
+      <div className="px-3 py-2.5 border-b border-border-subtle bg-surface-0 shrink-0 panel-header-accent">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Layers className="w-3.5 h-3.5 text-text-accent" />
-            <span className="text-[11px] font-bold text-text-primary uppercase tracking-wide">Parts</span>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-gradient">Parts</span>
           </div>
           {hasSelection && (
-            <span className="text-[10px] font-medium text-text-tertiary bg-surface-2 px-1.5 py-0.5 rounded">
-              {p.selectedComponentIds.length} selected
+            <span className="text-[9px] font-bold text-white px-2 py-0.5 rounded shadow-sm" style={{ background: 'var(--grad-primary)' }}>
+              {p.selectedComponentIds.length} Selected
             </span>
           )}
         </div>
@@ -525,14 +593,17 @@ function ComponentTransformPanel(p: CTProps) {
       {hasRef && (
         <div className="flex flex-col flex-1 overflow-y-auto">
           {/* Selected part identity */}
-          <div className="px-3 py-2 border-b border-border-subtle bg-accent-muted/30 shrink-0">
+          <div className="px-3 py-2 border-b border-border-subtle shrink-0 relative overflow-hidden"
+            style={{ background: 'linear-gradient(90deg, rgba(139,92,246,0.06) 0%, transparent 100%)' }}
+          >
+            <div className="absolute left-0 top-0 bottom-0 w-[2px]" style={{ background: 'var(--grad-primary)' }} />
             <div className="flex items-center justify-between">
-              <span className="text-[11px] text-text-accent font-semibold truncate">{refId}</span>
+              <span className="text-[11px] font-bold truncate text-gradient">{refId}</span>
               <button
                 onClick={() => p.resetComponentTransform(refId)}
                 data-tooltip="Reset this part's transform"
                 aria-label="Reset transform"
-                className="flex items-center gap-1 px-1.5 h-5 text-[10px] text-text-tertiary hover:text-text-primary hover:bg-surface-2 rounded cursor-pointer transition-colors"
+                className="flex items-center gap-1 px-1.5 h-5 text-[10px] text-text-tertiary hover:text-text-primary hover:bg-surface-2 rounded border border-transparent hover:border-border-default cursor-pointer transition-all"
               >
                 <RotateCcw className="w-2.5 h-2.5" />
                 Reset
@@ -545,10 +616,13 @@ function ComponentTransformPanel(p: CTProps) {
             <div className="flex flex-col gap-2 px-3 py-2.5 border-b border-border-subtle">
               <div className="flex items-center justify-between">
                 <SubLabel>Position</SubLabel>
-                <div className="flex bg-surface-2 border border-border-subtle rounded overflow-hidden">
+                <div className="flex rounded overflow-hidden p-[1px]" style={{ background: 'var(--border-default)' }}>
                   {(['local', 'world'] as const).map(s => (
                     <button key={s} onClick={() => p.setTransformSpace(s)}
-                      className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-colors ${p.transformSpace === s ? 'bg-accent text-text-on-accent' : 'text-text-tertiary hover:text-text-primary'}`}
+                      className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-all"
+                      style={p.transformSpace === s
+                        ? { background: 'var(--grad-primary)', color: 'white', borderRadius: '2px' }
+                        : { color: 'var(--text-tertiary)' }}
                     >{s}</button>
                   ))}
                 </div>
@@ -578,7 +652,10 @@ function ComponentTransformPanel(p: CTProps) {
                   onClick={() => setUniformScale(v => !v)}
                   data-tooltip={uniformScale ? 'Uniform scale on' : 'Uniform scale off'}
                   aria-label="Lock uniform scale"
-                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-bold uppercase cursor-pointer transition-colors ${uniformScale ? 'bg-accent-muted border-accent/30 text-text-accent' : 'border-border-subtle text-text-tertiary hover:text-text-primary'}`}
+                  className="flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-bold uppercase cursor-pointer transition-all"
+                  style={uniformScale
+                    ? { background: 'var(--accent-muted)', borderColor: 'var(--accent)', color: 'var(--text-accent)' }
+                    : { borderColor: 'var(--border-default)', color: 'var(--text-tertiary)' }}
                 >
                   {uniformScale ? <Lock className="w-2.5 h-2.5" /> : <Unlock className="w-2.5 h-2.5" />}
                   Uniform
@@ -598,7 +675,13 @@ function ComponentTransformPanel(p: CTProps) {
                 {(['x', 'y', 'z'] as const).map(axis => (
                   <button key={axis} onClick={() => mirrorComponent(axis)}
                     data-tooltip={`Mirror on ${axis.toUpperCase()}`}
-                    className="flex-1 h-7 flex items-center justify-center gap-1 rounded bg-surface-2 border border-border-default hover:bg-surface-3 hover:border-border-strong text-text-secondary hover:text-text-primary text-[10px] font-bold uppercase cursor-pointer transition-colors"
+                    className="flex-1 h-7 flex items-center justify-center gap-1 rounded text-text-secondary hover:text-text-primary text-[10px] font-bold uppercase cursor-pointer transition-all"
+                    style={{
+                      background: 'var(--surface-2)',
+                      border: '1px solid var(--border-default)'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 1px rgba(139,92,246,0.12)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.boxShadow = 'none'; }}
                   >
                     <AxisDot axis={axis} />
                     {axis.toUpperCase()}
@@ -620,16 +703,19 @@ function ComponentTransformPanel(p: CTProps) {
                 </div>
                 <button
                   onClick={applyToSiblings}
-                  className="w-full h-7 rounded bg-surface-2 border border-border-default hover:bg-surface-3 hover:border-border-strong flex items-center justify-center gap-1.5 text-[11px] font-medium text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+                  className="w-full h-7 rounded border flex items-center justify-center gap-1.5 text-[11px] font-semibold text-text-secondary hover:text-text-primary cursor-pointer transition-all"
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border-default)' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 1px rgba(139,92,246,0.12)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.boxShadow = 'none'; }}
                 >
-                  <Copy className="w-3 h-3" />
+                  <Copy className="w-3 h-3 text-text-accent" />
                   Apply transform to all selected
                 </button>
               </div>
             )}
 
             {/* Snap settings (collapsible) */}
-            <div className="flex flex-col px-3 py-2 border-b border-border-subtle">
+            <div className="flex flex-col px-3 py-2.5 border-b border-border-subtle">
               <button
                 onClick={() => setSnapOpen(v => !v)}
                 className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-text-tertiary cursor-pointer hover:text-text-secondary transition-colors"
@@ -638,7 +724,7 @@ function ComponentTransformPanel(p: CTProps) {
                 <ChevronDown className={`w-3 h-3 transition-transform ${snapOpen ? '' : '-rotate-90'}`} />
               </button>
               {snapOpen && (
-                <div className="flex gap-1.5 mt-2">
+                <div className="flex gap-1.5 mt-2 animate-panel-in">
                   <AxisInput axis="x" value={p.translationSnap} step={1} unit="mm" onChange={p.setTranslationSnap} />
                   <AxisInput axis="y" value={p.rotationSnap}    step={0.5} unit="°" onChange={p.setRotationSnap} />
                   <AxisInput axis="z" value={p.scaleSnap}       step={0.01}         onChange={p.setScaleSnap} />
@@ -654,7 +740,22 @@ function ComponentTransformPanel(p: CTProps) {
         <div className="px-3 py-2 border-t border-border-subtle shrink-0 mt-auto">
           <button
             onClick={p.resetAllComponentTransforms}
-            className="w-full h-7 rounded border border-border-subtle hover:border-border-default text-text-tertiary hover:text-text-primary text-[11px] font-medium flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            className="w-full h-7 rounded border text-[11px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+            style={{
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border-default)',
+              color: 'var(--text-secondary)'
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'var(--error)';
+              e.currentTarget.style.color = 'var(--error)';
+              e.currentTarget.style.boxShadow = '0 0 10px rgba(239,68,68,0.12)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'var(--border-default)';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           >
             <RotateCcw className="w-3 h-3" />
             Reset All Transforms
@@ -754,14 +855,14 @@ export default function Inspector() {
       style={{ width: 'var(--width-right-panel)' }}
     >
       {/* ── Panel header ─────────────────────────────────────────── */}
-      <div className="h-8 px-3 flex items-center justify-between border-b border-border-subtle bg-surface-0 shrink-0">
+      <div className="h-8 px-3 flex items-center justify-between border-b border-border-subtle bg-surface-0 shrink-0 panel-header-accent">
         <div className="flex items-center gap-2">
           <ObjIcon className="w-3.5 h-3.5 text-text-accent" />
           <span className="text-[12px] font-semibold text-text-primary">{activeModule.label}</span>
           <span className="text-[10px] text-text-tertiary font-mono">{bb.w}×{bb.h}×{bb.d}mm</span>
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-[10px] text-text-tertiary uppercase font-bold tracking-widest">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gradient">
             {editMode === 'component' ? 'Parts' : 'Properties'}
           </span>
           <button
@@ -814,12 +915,22 @@ export default function Inspector() {
                       <button
                         key={preset.id}
                         onClick={() => applyPreset(preset.id)}
-                        className={[
-                          'px-2.5 py-1 rounded text-[11px] font-medium cursor-pointer transition-all border',
-                          sel
-                            ? 'bg-accent text-text-on-accent border-accent shadow-sm'
-                            : 'bg-surface-2 text-text-secondary border-border-default hover:border-border-strong hover:text-text-primary',
-                        ].join(' ')}
+                        className="px-2.5 py-1 rounded text-[11px] font-semibold cursor-pointer transition-all select-none"
+                        style={sel
+                          ? { background: 'var(--grad-primary)', color: 'white', boxShadow: 'var(--shadow-btn)' }
+                          : { background: 'var(--surface-2)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+                        onMouseEnter={e => {
+                          if (!sel) {
+                            e.currentTarget.style.borderColor = 'var(--accent)';
+                            e.currentTarget.style.color = 'var(--text-primary)';
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (!sel) {
+                            e.currentTarget.style.borderColor = 'var(--border-default)';
+                            e.currentTarget.style.color = '';
+                          }
+                        }}
                       >
                         {preset.label}
                       </button>
@@ -900,14 +1011,17 @@ export default function Inspector() {
           <div className="px-3 py-2 border-t border-border-subtle bg-surface-0 shrink-0 flex gap-2">
             <button
               onClick={resetObject}
-              className="flex-1 flex items-center justify-center gap-1.5 h-7 rounded bg-surface-1 border border-border-default hover:bg-surface-2 hover:border-border-strong text-[12px] font-medium text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+              className="flex-1 flex items-center justify-center gap-1.5 h-7 rounded text-[12px] font-semibold text-text-secondary hover:text-text-primary cursor-pointer transition-all"
+              style={{ background: 'var(--surface-1)', border: '1px solid var(--border-default)' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 1px rgba(139,92,246,0.12)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.boxShadow = 'none'; }}
             >
-              <RotateCcw className="w-3 h-3" />
+              <RotateCcw className="w-3 h-3 text-text-tertiary" />
               Reset Changes
             </button>
             <button
               onClick={randomizeObject}
-              className="flex-1 flex items-center justify-center gap-1.5 h-7 rounded bg-surface-1 border border-border-default hover:bg-surface-2 hover:border-border-strong text-[12px] font-medium text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+              className="flex-1 flex items-center justify-center gap-1.5 h-7 rounded text-[12px] font-semibold text-white cursor-pointer transition-all btn-gradient"
             >
               <Shuffle className="w-3 h-3" />
               Randomize

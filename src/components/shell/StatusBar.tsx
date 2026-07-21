@@ -66,9 +66,19 @@ export default function StatusBar() {
 
   return (
     <footer
-      className="shrink-0 h-8 w-full bg-surface-0 border-t border-border-subtle px-3 flex items-center justify-between gap-4 select-none z-10"
-      style={{ fontFamily: 'var(--font-geist-mono, monospace)', fontSize: '11px' }}
+      className="shrink-0 h-8 w-full bg-surface-0 border-t border-border-subtle px-3 flex items-center justify-between gap-4 select-none z-10 relative overflow-hidden"
+      style={{
+        fontFamily: 'var(--font-geist-mono, monospace)',
+        fontSize: '11px',
+        boxShadow: '0 -1px 0 rgba(139,92,246,0.05)'
+      }}
     >
+      {/* Top subtle border gradient */}
+      <div
+        className="absolute top-0 left-0 right-0 h-px pointer-events-none"
+        style={{ background: 'linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)', opacity: 0.2 }}
+      />
+
       {/* Left: Object + selection */}
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <span className="text-text-tertiary shrink-0">Object:</span>
@@ -78,7 +88,7 @@ export default function StatusBar() {
         )}
         <span className="text-border-strong shrink-0">·</span>
         <span className="text-text-tertiary shrink-0">Selected:</span>
-        <span className="text-text-accent font-medium truncate">{getSelectionLabel()}</span>
+        <span className="font-semibold truncate text-gradient">{getSelectionLabel()}</span>
       </div>
 
       {/* Center: warning or all-valid */}
@@ -86,7 +96,7 @@ export default function StatusBar() {
         {hasWarning && activeWarning ? (
           <div className="flex items-center gap-1.5 text-warning animate-fade-in">
             <AlertTriangle className="w-3 h-3 shrink-0" />
-            <span className="truncate font-medium">{activeWarning}</span>
+            <span className="truncate font-semibold">{activeWarning}</span>
           </div>
         ) : (
           <span className="text-text-tertiary">All values are valid</span>
@@ -97,7 +107,10 @@ export default function StatusBar() {
       <div className="flex items-center gap-2.5 shrink-0">
         {/* Active mode */}
         <div className="flex items-center gap-1">
-          <div className={`w-1.5 h-1.5 rounded-full ${editMode === 'component' ? 'bg-accent' : 'bg-text-tertiary'}`} />
+          <div
+            className="w-1.5 h-1.5 rounded-full shrink-0"
+            style={{ background: editMode === 'component' ? 'var(--grad-primary)' : 'var(--text-tertiary)' }}
+          />
           <span className="text-text-tertiary hidden md:inline">{modeLabel}</span>
         </div>
 
@@ -121,12 +134,14 @@ export default function StatusBar() {
             key="warn"
             title="A value was automatically adjusted"
             className="w-2 h-2 rounded-full bg-warning animate-state-pulse"
+            style={{ boxShadow: '0 0 8px var(--warning)' }}
           />
         ) : (
           <div
             key="ok"
             title="All parameters are valid"
             className="w-2 h-2 rounded-full bg-success animate-state-pulse"
+            style={{ boxShadow: '0 0 8px var(--success)' }}
           />
         )}
       </div>

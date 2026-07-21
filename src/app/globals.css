@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "../design/tokens.css";
 
-/* ── App shell resets ─────────────────────────────────────────────── */
+/* ── App shell resets ─────────────────────────────────────── */
 html, body {
   background-color: var(--bg-app);
   color: var(--text-primary);
@@ -16,20 +16,96 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Scrollbars ────────────────────────────────────────────────────── */
-::-webkit-scrollbar            { width: 5px; height: 5px; }
+/* ── Scrollbars ───────────────────────────────────────────── */
+::-webkit-scrollbar            { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track      { background: transparent; }
-::-webkit-scrollbar-thumb      { background: var(--surface-3); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover{ background: var(--border-strong); }
+::-webkit-scrollbar-thumb      {
+  background: var(--surface-3);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, hsl(258, 78%, 58%), hsl(192, 88%, 50%));
+}
 
-/* ── Focus ring ────────────────────────────────────────────────────── */
+/* ── Focus ring ───────────────────────────────────────────── */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 :focus:not(:focus-visible) { outline: none; }
 
-/* ── Slider — professional desktop style ──────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   GRADIENT UTILITIES — shared classes for all components
+   ══════════════════════════════════════════════════════════ */
+
+/* Gradient text */
+.text-gradient {
+  background: var(--text-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Primary gradient button */
+.btn-gradient {
+  background: var(--grad-primary);
+  color: var(--text-on-accent);
+  border: none;
+  box-shadow: var(--shadow-btn);
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-spring);
+}
+.btn-gradient:hover {
+  background: var(--grad-primary-h);
+  box-shadow: var(--shadow-btn-h);
+  transform: translateY(-1px);
+}
+.btn-gradient:active {
+  background: var(--grad-primary-a);
+  box-shadow: var(--shadow-btn);
+  transform: translateY(0);
+}
+
+/* Ghost gradient button (transparent + gradient border) */
+.btn-ghost-gradient {
+  background: transparent;
+  position: relative;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  transition: all var(--motion-fast) var(--ease-out);
+}
+.btn-ghost-gradient::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: var(--border-grad);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity var(--motion-fast) var(--ease-out);
+}
+.btn-ghost-gradient:hover::before { opacity: 1; }
+.btn-ghost-gradient:hover { background: var(--grad-glow-combined); }
+
+/* Active / selected gradient pill */
+.active-gradient {
+  background: var(--grad-primary);
+  color: var(--text-on-accent);
+  box-shadow: 0 0 14px var(--grad-glow-primary), var(--shadow-btn);
+}
+
+/* Active gradient with subtle glow ring */
+.active-gradient-glow {
+  background: var(--grad-primary);
+  color: var(--text-on-accent);
+  box-shadow: 0 0 0 1px hsla(258, 78%, 58%, 0.4),
+              0 0 16px rgba(139, 92, 246, 0.3),
+              var(--shadow-btn);
+}
+
+/* ── Slider — gradient track ──────────────────────────────── */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
@@ -46,67 +122,124 @@ input[type="range"]::-webkit-slider-runnable-track {
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: var(--text-primary);
-  border: 2px solid var(--accent);
+  background: var(--grad-primary);
+  border: 2px solid hsl(230, 14%, 10%);
   cursor: pointer;
-  margin-top: -5px;
-  transition: border-color var(--motion-fast), transform var(--motion-fast);
-  box-shadow: 0 0 0 0 var(--accent-muted);
+  margin-top: -5.5px;
+  box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
+  transition:
+    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-spring);
 }
 input[type="range"]::-webkit-slider-thumb:hover {
-  border-color: var(--accent-text);
-  transform: scale(1.15);
+  transform: scale(1.2);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.25);
 }
 input[type="range"]::-webkit-slider-thumb:active {
-  border-color: var(--accent);
-  transform: scale(1.2);
-  box-shadow: 0 0 0 5px var(--accent-muted);
+  transform: scale(1.15);
+  box-shadow: 0 0 0 7px rgba(139, 92, 246, 0.18);
 }
 input[type="range"]::-moz-range-thumb {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: var(--text-primary);
-  border: 2px solid var(--accent);
+  background: var(--grad-primary);
+  border: 2px solid hsl(230, 14%, 10%);
   cursor: pointer;
 }
 input[type="range"]::-moz-range-thumb:active {
-  box-shadow: 0 0 0 5px var(--accent-muted);
+  box-shadow: 0 0 0 7px rgba(139, 92, 246, 0.18);
 }
 
-/* ── Number input — remove spinners ───────────────────────────────── */
+/* ── Number inputs — no spinners ──────────────────────────── */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
 input[type="number"] { -moz-appearance: textfield; }
 
-/* ── Tooltip base ─────────────────────────────────────────────────── */
+/* ── Input focus glow ─────────────────────────────────────── */
+.input-gradient-focus {
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+.input-gradient-focus:focus-within {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+/* ── Tooltip ──────────────────────────────────────────────── */
 [data-tooltip] { position: relative; }
 [data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
-  bottom: calc(100% + 6px);
+  bottom: calc(100% + 7px);
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(3px);
   white-space: nowrap;
   background: var(--surface-4);
   color: var(--text-primary);
   font-size: var(--font-size-xs);
   font-family: inherit;
-  padding: 3px 7px;
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-default);
   pointer-events: none;
   opacity: 0;
-  transition: opacity var(--motion-fast) var(--ease-out);
+  transition:
+    opacity var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
   z-index: 9999;
   box-shadow: var(--shadow-md);
 }
-[data-tooltip]:hover::after { opacity: 1; transition-delay: 400ms; }
+[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  transition-delay: 380ms;
+}
 
-/* ── Panel resize handle ──────────────────────────────────────────── */
+/* ── Panel gradient header accent line ────────────────────── */
+.panel-header-accent {
+  position: relative;
+}
+.panel-header-accent::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--grad-primary);
+  opacity: 0.35;
+}
+
+/* ── Gradient left border for selected rows ───────────────── */
+.selected-row-bar {
+  position: relative;
+}
+.selected-row-bar::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 15%;
+  bottom: 15%;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--grad-primary);
+}
+
+/* ── Section divider with gradient ───────────────────────── */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--border-subtle) 20%,
+    var(--border-default) 50%,
+    var(--border-subtle) 80%,
+    transparent 100%);
+}
+
+/* ── Panel resize handle ──────────────────────────────────── */
 .panel-resize-handle {
   width: 4px;
   cursor: col-resize;
@@ -130,9 +263,14 @@ input[type="number"] { -moz-appearance: textfield; }
   border-radius: 1px;
   transition: background var(--motion-fast), height var(--motion-fast);
 }
-.panel-resize-handle:hover::after { background: var(--accent); height: 32px; }
+.panel-resize-handle:hover::after {
+  background: var(--grad-primary);
+  height: 40px;
+}
 
-/* ── Keyframe animations ──────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   KEYFRAME ANIMATIONS
+   ══════════════════════════════════════════════════════════ */
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
@@ -145,35 +283,52 @@ input[type="number"] { -moz-appearance: textfield; }
   from { transform: translateX(100%); }
   to   { transform: translateX(0); }
 }
-@keyframes tooltipIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
-}
-@keyframes sweep {
-  0%   { transform: translateX(-100%) skewX(-12deg); opacity: 0; }
-  15%  { opacity: 1; }
-  85%  { opacity: 1; }
-  100% { transform: translateX(100%) skewX(-12deg); opacity: 0; }
-}
-@keyframes statePulse {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.7); filter: brightness(1.4); }
-  100% { transform: scale(1); }
-}
 @keyframes panelFadeIn {
-  from { opacity: 0; transform: scaleY(0.97); }
-  to   { opacity: 1; transform: scaleY(1); }
+  from { opacity: 0; transform: scaleY(0.96) translateY(-4px); }
+  to   { opacity: 1; transform: scaleY(1) translateY(0); }
 }
 @keyframes hintFadeOut {
   0%   { opacity: 1; }
   70%  { opacity: 1; }
   100% { opacity: 0; pointer-events: none; }
 }
+@keyframes sweep {
+  0%   { transform: translateX(-110%) skewX(-12deg); opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translateX(110%) skewX(-12deg); opacity: 0; }
+}
+@keyframes statePulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.8); filter: brightness(1.5); }
+  100% { transform: scale(1); }
+}
+@keyframes gradShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(139, 92, 246, 0.2); }
+  50%       { box-shadow: 0 0 22px rgba(139, 92, 246, 0.45); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes popIn {
+  0%   { opacity: 0; transform: scale(0.92); }
+  60%  { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1); }
+}
 
-.animate-fade-in         { animation: fadeIn var(--motion-normal) var(--ease-out) forwards; }
-.animate-slide-in-left   { animation: slideInLeft 240ms var(--ease-out) forwards; }
-.animate-slide-in-right  { animation: slideInRight 240ms var(--ease-out) forwards; }
-.animate-sweep           { animation: sweep 0.7s var(--ease-out) forwards; }
-.animate-state-pulse     { animation: statePulse 0.45s var(--ease-out) forwards; }
-.animate-panel-in        { animation: panelFadeIn var(--motion-normal) var(--ease-out) forwards; }
-.animate-hint-fade-out   { animation: hintFadeOut 4s ease-out 2s forwards; }
+/* ── Animation utility classes ────────────────────────────── */
+.animate-fade-in        { animation: fadeIn var(--motion-normal) var(--ease-out) forwards; }
+.animate-slide-in-left  { animation: slideInLeft 240ms var(--ease-out) forwards; }
+.animate-slide-in-right { animation: slideInRight 240ms var(--ease-out) forwards; }
+.animate-sweep          { animation: sweep 0.7s var(--ease-out) forwards; }
+.animate-state-pulse    { animation: statePulse 0.45s var(--ease-out) forwards; }
+.animate-panel-in       { animation: panelFadeIn var(--motion-normal) var(--ease-out) forwards; }
+.animate-hint-fade-out  { animation: hintFadeOut 4s ease-out 2s forwards; }
+.animate-glow-pulse     { animation: glowPulse 2.5s ease-in-out infinite; }
+.animate-pop-in         { animation: popIn 0.25s var(--ease-spring) forwards; }
