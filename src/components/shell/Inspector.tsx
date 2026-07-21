@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, RotateCcw, Check, Sparkles } from 'lucide-react';
+import { ChevronDown, RotateCcw, Check, Sparkles, Shuffle } from 'lucide-react';
 import { useStore } from '../../state/store';
 import { objectRegistry } from '../../objects';
 
@@ -50,6 +50,8 @@ export default function Inspector() {
   const activePresetId = useStore((state) => state.activePresetId);
   const warningMessages = useStore((state) => state.warningMessages);
   const clearWarning = useStore((state) => state.clearWarning);
+  const resetObject = useStore((state) => state.resetObject);
+  const randomizeObject = useStore((state) => state.randomizeObject);
 
   const activeModule = objectRegistry[selectedObjectType];
 
@@ -246,6 +248,24 @@ export default function Inspector() {
             </div>
           );
         })}
+      </div>
+
+      {/* Sticky Reset/Randomize footer (Section 7.1 & 21-22) */}
+      <div className="p-4 border-t border-border-subtle bg-surface-0 shrink-0 grid grid-cols-2 gap-2">
+        <button
+          onClick={resetObject}
+          className="flex items-center justify-center gap-1.5 h-8 rounded-sm bg-surface-1 border border-border-default hover:bg-surface-2 text-size-secondary font-medium text-text-secondary hover:text-text-primary transition-all cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          <span>Reset</span>
+        </button>
+        <button
+          onClick={randomizeObject}
+          className="flex items-center justify-center gap-1.5 h-8 rounded-sm bg-surface-1 border border-border-default hover:bg-surface-2 text-size-secondary font-medium text-text-secondary hover:text-text-primary transition-all cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent"
+        >
+          <Shuffle className="w-3.5 h-3.5" />
+          <span>Randomize</span>
+        </button>
       </div>
     </aside>
   );
