@@ -51,7 +51,20 @@ export const tableModule: ObjectDefinitionModule = {
       depth: Math.max(600, Math.min(1600, Number(params.depth ?? 800))),
     };
   },
-  deriveGeometry: () => [],
+  deriveGeometry: (params) => {
+    const w = (params.width ?? 1200) / 1000;
+    const h = (params.height ?? 750) / 1000;
+    const d = (params.depth ?? 800) / 1000;
+    return [
+      {
+        id: 'table-placeholder',
+        name: 'Table Placeholder',
+        geometry: { type: 'box', args: [w, h, d] },
+        material: { color: '#0d9488' },
+        position: [0, h / 2, 0],
+      },
+    ];
+  },
   hierarchy: () => ({
     id: 'table',
     label: 'Table',

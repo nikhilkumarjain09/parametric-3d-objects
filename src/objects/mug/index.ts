@@ -51,7 +51,20 @@ export const mugModule: ObjectDefinitionModule = {
       depth: Math.max(40, Math.min(180, Number(params.depth ?? 90))),
     };
   },
-  deriveGeometry: () => [],
+  deriveGeometry: (params) => {
+    const w = (params.width ?? 90) / 1000;
+    const h = (params.height ?? 95) / 1000;
+    const d = (params.depth ?? 90) / 1000;
+    return [
+      {
+        id: 'mug-placeholder',
+        name: 'Mug Placeholder',
+        geometry: { type: 'box', args: [w, h, d] },
+        material: { color: '#0ea5e9' },
+        position: [0, h / 2, 0],
+      },
+    ];
+  },
   hierarchy: () => ({
     id: 'mug',
     label: 'Mug',

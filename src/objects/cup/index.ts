@@ -51,7 +51,20 @@ export const cupModule: ObjectDefinitionModule = {
       depth: Math.max(30, Math.min(200, Number(params.depth ?? 80))),
     };
   },
-  deriveGeometry: () => [],
+  deriveGeometry: (params) => {
+    const w = (params.width ?? 80) / 1000;
+    const h = (params.height ?? 100) / 1000;
+    const d = (params.depth ?? 80) / 1000;
+    return [
+      {
+        id: 'cup-placeholder',
+        name: 'Cup Placeholder',
+        geometry: { type: 'box', args: [w, h, d] },
+        material: { color: '#10b981' },
+        position: [0, h / 2, 0],
+      },
+    ];
+  },
   hierarchy: () => ({
     id: 'cup',
     label: 'Cup',

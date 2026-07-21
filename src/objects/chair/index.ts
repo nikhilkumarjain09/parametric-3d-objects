@@ -51,7 +51,20 @@ export const chairModule: ObjectDefinitionModule = {
       depth: Math.max(400, Math.min(800, Number(params.depth ?? 500))),
     };
   },
-  deriveGeometry: () => [],
+  deriveGeometry: (params) => {
+    const w = (params.width ?? 500) / 1000;
+    const h = (params.height ?? 900) / 1000;
+    const d = (params.depth ?? 500) / 1000;
+    return [
+      {
+        id: 'chair-placeholder',
+        name: 'Chair Placeholder',
+        geometry: { type: 'box', args: [w, h, d] },
+        material: { color: '#f59e0b' },
+        position: [0, h / 2, 0],
+      },
+    ];
+  },
   hierarchy: () => ({
     id: 'chair',
     label: 'Chair',
