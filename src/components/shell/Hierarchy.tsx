@@ -120,14 +120,14 @@ export default function Hierarchy() {
               setSelection({ type: 'component', id: node.id });
             }
           }}
-          className={`h-[28px] w-full flex items-center justify-between px-3 cursor-pointer group transition-colors duration-100 ${
+          className={`h-[28px] w-full flex items-center justify-between px-3 cursor-pointer group transition-all duration-200 ease-out border-l-2 ${
             isSelected 
-              ? 'bg-accent-muted border-l-2 border-border-accent text-text-primary' 
-              : 'border-l-2 border-transparent text-text-secondary hover:bg-surface-2 hover:text-text-primary'
+              ? 'bg-accent-muted border-border-accent text-text-primary font-semibold' 
+              : 'border-transparent text-text-secondary hover:bg-surface-2 hover:text-text-primary'
           }`}
           style={{ paddingLeft: `${12 + level * 16}px` }} // 16px indentation per level (Section 5)
         >
-          <div className="flex items-center gap-2 truncate">
+          <div className="flex items-center gap-2 truncate flex-1 min-w-0 mr-2">
             {/* Expansion Target (chevron click, Section 5) */}
             {hasChildren ? (
               <button
@@ -147,11 +147,30 @@ export default function Hierarchy() {
               <div className="w-4" /> // Spacing matching chevron width
             )}
 
-            <NodeIcon className={`w-4 h-4 shrink-0 transition-colors ${
+            <NodeIcon className={`w-4 h-4 shrink-0 transition-colors duration-200 ${
               isSelected ? 'text-text-accent' : 'text-text-tertiary group-hover:text-text-secondary'
             }`} />
             <span className="text-size-secondary font-medium truncate">{node.label}</span>
           </div>
+
+          {/* Hierarchy Metadata Badges (Section 19.3) */}
+          {(node.id === 'legs_group' || node.id === 'legs') && (
+            <span className="text-[10px] font-bold text-text-tertiary bg-surface-3 px-1.5 py-0.5 rounded-sm scale-90 group-hover:bg-surface-0 transition-colors shrink-0">
+              {selectedObjectType === 'table' 
+                ? (currentParams.configuration === 'Six-Leg' ? '6' : (currentParams.configuration === 'Pedestal' || currentParams.configuration === 'Central Support' ? '1' : '4'))
+                : '4'}
+            </span>
+          )}
+          {node.id === 'backrest_group' && selectedObjectType === 'chair' && currentParams.backrestShape === 'Slatted' && (
+            <span className="text-[10px] font-bold text-text-tertiary bg-surface-3 px-1.5 py-0.5 rounded-sm scale-90 group-hover:bg-surface-0 transition-colors shrink-0">
+              5
+            </span>
+          )}
+          {node.id === 'armrests_group' && (
+            <span className="text-[10px] font-bold text-text-tertiary bg-surface-3 px-1.5 py-0.5 rounded-sm scale-90 group-hover:bg-surface-0 transition-colors shrink-0">
+              2
+            </span>
+          )}
         </div>
 
         {/* Child Group Nodes */}

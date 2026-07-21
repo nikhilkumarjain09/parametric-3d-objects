@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, RotateCcw, Check, Sparkles, Shuffle } from 'lucide-react';
+import { ChevronDown, RotateCcw, Check, Sparkles, Shuffle, Table2, Armchair, CupSoda, Coffee } from 'lucide-react';
 import { useStore } from '../../state/store';
 import { objectRegistry } from '../../objects';
 
@@ -64,6 +64,14 @@ export default function Inspector() {
   // Color Picker Popover
   const [colorPickerParamId, setColorPickerParamId] = useState<string | null>(null);
 
+  const [width, setWidth] = useState<number | null>(null);
+  useEffect(() => {
+    setWidth(window.innerWidth);
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Initialize and default all sections to expanded on first load of object type (Section 7.1)
   useEffect(() => {
     const sections = getSectionOrder(selectedObjectType);
@@ -96,6 +104,131 @@ export default function Inspector() {
       {/* Main Parameters Scroll List */}
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6 scrollbar">
         
+        {/* --- OBJECT SUMMARY CARD (Section 19.3) --- */}
+        <div className="bg-surface-2 border border-border-default rounded-md p-3.5 flex items-center justify-between gap-4 select-none shadow-sm relative overflow-hidden group transition-all duration-150">
+          <div className="flex flex-col gap-1 min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              {selectedObjectType === 'table' && <Table2 className="w-4 h-4 text-text-accent" />}
+              {selectedObjectType === 'chair' && <Armchair className="w-4 h-4 text-text-accent" />}
+              {selectedObjectType === 'cup' && <CupSoda className="w-4 h-4 text-text-accent" />}
+              {selectedObjectType === 'mug' && <Coffee className="w-4 h-4 text-text-accent" />}
+              <span className="font-bold text-size-body text-text-primary uppercase tracking-wide truncate">
+                {activeModule.label}
+              </span>
+            </div>
+            <div className="flex flex-col mt-1.5">
+              <span className="text-[10px] text-text-tertiary uppercase font-bold tracking-wider">
+                Headline Size
+              </span>
+              <span className="font-mono text-size-secondary text-text-secondary font-bold tracking-tight">
+                {(() => {
+                  const params = currentParams;
+                  let w = 0, h = 0, d = 0;
+                  switch (selectedObjectType) {
+                    case 'table':
+                      w = params.width ?? 1200;
+                      h = params.height ?? 750;
+                      d = (params.shape === 'Square' || params.shape === 'Round') ? w : (params.depth ?? 800);
+                      break;
+                    case 'chair':
+                      w = params.seatWidth ?? 450;
+                      h = Math.round(params.height ?? 900);
+                      d = params.seatDepth ?? 450;
+                      break;
+                    case 'cup':
+                      w = Math.max(params.topDiameter ?? 80, params.bottomDiameter ?? 60);
+                      h = params.height ?? 100;
+                      d = w;
+                      break;
+                    case 'mug':
+                      w = params.diameter ?? 90;
+                      h = params.height ?? 95;
+                      d = w;
+                      break;
+                  }
+                  return `${w} × ${h} × ${d} mm`;
+                })()}
+              </span>
+            </div>
+          </div>
+
+          {/* Isometric bounding-box SVG (Degrades/hides on small displays under 768px, Section 19.4) */}
+          {(!width || width >= 768) && (
+            <div className="w-14 h-14 shrink-0 bg-surface-3 border border-border-subtle rounded-sm flex items-center justify-center p-0.5 shadow-inner">
+              {(() => {
+                const params = currentParams;
+                let W = 100, H = 100, D = 100;
+                switch (selectedObjectType) {
+                  case 'table':
+                    W = params.width ?? 1200;
+                    H = params.height ?? 750;
+                    D = (params.shape === 'Square' || params.shape === 'Round') ? W : (params.depth ?? 800);
+                    break;
+                  case 'chair':
+                    W = params.seatWidth ?? 450;
+                    H = params.height ?? 900;
+                    D = params.seatDepth ?? 450;
+                    break;
+                  case 'cup':
+                    W = Math.max(params.topDiameter ?? 80, params.bottomDiameter ?? 60);
+                    H = params.height ?? 100;
+                    D = W;
+                    break;
+                  case 'mug':
+                    W = params.diameter ?? 90;
+                    H = params.height ?? 95;
+                    D = W;
+                    break;
+                }
+                const maxDim = Math.max(W, H, D);
+                const sw = (W / maxDim) * 16;
+                const sh = (H / maxDim) * 16;
+                const sd = (D / maxDim) * 16;
+                
+                const cx = 28;
+                const cy = 32;
+                const cos30 = 0.866;
+                const sin30 = 0.5;
+
+                const pBottom = `${cx},${cy}`;
+                const pLeft = `${cx - sw * cos30},${cy - sw * sin30}`;
+                const pRight = `${cx + sd * cos30},${cy - sd * sin30}`;
+                const pTopCenter = `${cx},${cy - sh}`;
+                const pTopLeft = `${cx - sw * cos30},${cy - sh - sw * sin30}`;
+                const pTopRight = `${cx + sd * cos30},${cy - sh - sd * sin30}`;
+                const pTopTop = `${cx - sw * cos30 + sd * cos30},${cy - sh - sw * sin30 - sd * sin30}`;
+
+                return (
+                  <svg className="w-full h-full" viewBox="0 0 56 48">
+                    {/* Left Face */}
+                    <polygon 
+                      points={`${pBottom} ${pLeft} ${pTopLeft} ${pTopCenter}`} 
+                      fill="var(--surface-1)" 
+                      stroke="var(--border-default)" 
+                      strokeWidth="0.5" 
+                    />
+                    {/* Right Face */}
+                    <polygon 
+                      points={`${pBottom} ${pRight} ${pTopRight} ${pTopCenter}`} 
+                      fill="var(--surface-0)" 
+                      stroke="var(--border-default)" 
+                      strokeWidth="0.5" 
+                    />
+                    {/* Top Face */}
+                    <polygon 
+                      points={`${pTopCenter} ${pTopLeft} ${pTopTop} ${pTopRight}`} 
+                      fill="var(--accent-muted)" 
+                      opacity="0.3"
+                      stroke="var(--accent)" 
+                      strokeWidth="0.5" 
+                    />
+                  </svg>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+
         {/* --- A. PRESET SELECTOR (Section 7.1 & 15.5) --- */}
         {activeModule.presets && activeModule.presets.length > 0 && (
           <div className="flex flex-col gap-2">
@@ -178,71 +311,77 @@ export default function Inspector() {
                 />
               </button>
 
-              {/* Section Body */}
-              {isExpanded && (
-                <div className="flex flex-col gap-4 py-3 pl-1 pr-1">
-                  {visibleParams.map((param) => {
-                    const value = currentParams[param.id] ?? param.defaultValue;
-                    const hasWarning = !!warningMessages[param.id];
+              {/* Section Body with ease-out grid-row height transition (Section 19.2) */}
+              <div 
+                className={`grid transition-[grid-template-rows] duration-250 ease-out overflow-hidden ${
+                  isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                }`}
+              >
+                <div className="min-h-0">
+                  <div className="flex flex-col gap-4 py-3 pl-1 pr-1">
+                    {visibleParams.map((param) => {
+                      const value = currentParams[param.id] ?? param.defaultValue;
+                      const hasWarning = !!warningMessages[param.id];
 
-                    return (
-                      <div key={param.id} className="flex flex-col gap-2 relative group/row">
-                        {/* 1. NUMERIC FIELD (Section 12.1) */}
-                        {param.type === 'number' && (
-                          <NumericField 
-                            param={param} 
-                            value={value} 
-                            hasWarning={hasWarning}
-                            warningMessage={warningMessages[param.id]}
-                            onClearWarning={() => clearWarning(param.id)}
-                            onChange={(val) => updateParam(param.id, val)}
-                          />
-                        )}
+                      return (
+                        <div key={param.id} className="flex flex-col gap-2 relative group/row">
+                          {/* 1. NUMERIC FIELD (Section 12.1) */}
+                          {param.type === 'number' && (
+                            <NumericField 
+                              param={param} 
+                              value={value} 
+                              hasWarning={hasWarning}
+                              warningMessage={warningMessages[param.id]}
+                              onClearWarning={() => clearWarning(param.id)}
+                              onChange={(val) => updateParam(param.id, val)}
+                            />
+                          )}
 
-                        {/* 2. DROPDOWN FIELD (Section 12.2) */}
-                        {param.type === 'enum' && param.id !== 'material' && (
-                          <DropdownField
-                            param={param}
-                            value={value}
-                            isOpen={openDropdownId === param.id}
-                            setOpen={(open) => setOpenDropdownId(open ? param.id : null)}
-                            onChange={(val) => updateParam(param.id, val)}
-                          />
-                        )}
+                          {/* 2. DROPDOWN FIELD (Section 12.2) */}
+                          {param.type === 'enum' && param.id !== 'material' && (
+                            <DropdownField
+                              param={param}
+                              value={value}
+                              isOpen={openDropdownId === param.id}
+                              setOpen={(open) => setOpenDropdownId(open ? param.id : null)}
+                              onChange={(val) => updateParam(param.id, val)}
+                            />
+                          )}
 
-                        {/* 3. MATERIAL SELECTOR (Section 12.5) */}
-                        {param.id === 'material' && (
-                          <MaterialSelector
-                            param={param}
-                            value={value}
-                            onChange={(val) => updateParam(param.id, val)}
-                          />
-                        )}
+                          {/* 3. MATERIAL SELECTOR (Section 12.5) */}
+                          {param.id === 'material' && (
+                            <MaterialSelector
+                              param={param}
+                              value={value}
+                              onChange={(val) => updateParam(param.id, val)}
+                            />
+                          )}
 
-                        {/* 4. TOGGLE FIELD (Section 12.3) */}
-                        {param.type === 'boolean' && (
-                          <ToggleField
-                            param={param}
-                            value={value}
-                            onChange={(val) => updateParam(param.id, val)}
-                          />
-                        )}
+                          {/* 4. TOGGLE FIELD (Section 12.3) */}
+                          {param.type === 'boolean' && (
+                            <ToggleField
+                              param={param}
+                              value={value}
+                              onChange={(val) => updateParam(param.id, val)}
+                            />
+                          )}
 
-                        {/* 5. COLOR PICKER FIELD (Section 12.4) */}
-                        {param.type === 'color' && (
-                          <ColorField
-                            param={param}
-                            value={value}
-                            isOpen={colorPickerParamId === param.id}
-                            setOpen={(open) => setColorPickerParamId(open ? param.id : null)}
-                            onChange={(val) => updateParam(param.id, val)}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
+                          {/* 5. COLOR PICKER FIELD (Section 12.4) */}
+                          {param.type === 'color' && (
+                            <ColorField
+                              param={param}
+                              value={value}
+                              isOpen={colorPickerParamId === param.id}
+                              setOpen={(open) => setColorPickerParamId(open ? param.id : null)}
+                              onChange={(val) => updateParam(param.id, val)}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
+              </div>
               {/* HAIRLINE DIVIDER BETWEEN SECTIONS (Section 7.2) */}
               <div className="h-[1px] bg-border-subtle mt-2" />
             </div>
@@ -523,6 +662,14 @@ interface MaterialSelectorProps {
   onChange: (val: string) => void;
 }
 
+const MATERIAL_DESCRIPTORS: Record<string, string> = {
+  Ceramic: 'Glazed clay',
+  Wood: 'Warm hardwood',
+  Metal: 'Polished steel',
+  Plastic: 'Matte polymer',
+  Glass: 'Silica plate',
+};
+
 function MaterialSelector({ param, value, onChange }: MaterialSelectorProps) {
   const options = param.options ?? [];
 
@@ -541,11 +688,11 @@ function MaterialSelector({ param, value, onChange }: MaterialSelectorProps) {
             <button
               key={opt}
               onClick={() => onChange(opt)}
-              className="flex flex-col items-center gap-1.5 focus:outline-none group/swatch cursor-pointer"
+              className="flex flex-col items-center gap-1 focus:outline-none group/swatch cursor-pointer"
             >
               {/* Sphere Gradient Preview Container */}
               <div 
-                className={`w-12 h-12 rounded-full transition-all duration-150 relative ${
+                className={`w-11 h-11 rounded-full transition-all duration-150 relative ${
                   isSelected 
                     ? 'ring-2 ring-accent ring-offset-2 ring-offset-surface-1 scale-105 shadow-lg' 
                     : 'border border-border-default hover:border-border-strong hover:scale-[1.02]'
@@ -554,10 +701,15 @@ function MaterialSelector({ param, value, onChange }: MaterialSelectorProps) {
               />
               
               {/* Material label */}
-              <span className={`text-size-micro tracking-wide uppercase transition-colors duration-100 ${
+              <span className={`text-[10px] tracking-wide uppercase transition-colors duration-100 ${
                 isSelected ? 'text-text-accent font-bold' : 'text-text-tertiary group-hover/swatch:text-text-secondary'
               }`}>
                 {opt}
+              </span>
+
+              {/* Material descriptor (Section 19.3) */}
+              <span className="text-[10px] text-text-tertiary text-center leading-tight line-clamp-1 w-full max-w-[70px] mt-0.5 select-none font-sans normal-case">
+                {MATERIAL_DESCRIPTORS[opt] || ''}
               </span>
             </button>
           );

@@ -81,6 +81,7 @@ export default function StatusBar() {
   // Component meshes count (Section 8)
   const meshes = activeModule ? activeModule.deriveGeometry(currentParams) : [];
   const componentCount = meshes.length;
+  const parameterCount = activeModule ? activeModule.paramSchema.length : 0;
 
   const warningsList = Object.values(warningMessages);
   const hasWarning = warningsList.length > 0;
@@ -109,24 +110,38 @@ export default function StatusBar() {
         )}
       </div>
 
-      {/* Right side: Bounding Dimensions, Component Count, and Indicator Dot (Section 8) */}
-      <div className="flex items-center gap-2 max-w-[30%] shrink-0">
-        <span className="text-text-secondary">{getBoundingDimensionsText()}</span>
-        <span className="text-text-tertiary">|</span>
+      {/* Right side: Bounding Dimensions, Parameter/Component Count, Swatch Chip, and Indicator Dot (Section 8 & Section 19.3) */}
+      <div className="flex items-center gap-2 max-w-[40%] shrink-0">
+        <span className="text-text-secondary md:inline hidden">{getBoundingDimensionsText()}</span>
+        <span className="text-text-tertiary md:inline hidden">|</span>
+        
+        <span className="text-text-secondary">Params: {parameterCount}</span>
+        <span className="text-text-tertiary">/</span>
         <span className="text-text-secondary">Components: {componentCount}</span>
         <span className="text-text-tertiary">|</span>
-        <span className="text-text-tertiary text-size-micro uppercase tracking-wider font-bold">
-          {hasWarning ? 'Clamped' : 'Valid'}
+
+        {/* Compact inline material/finish swatch chip (Section 19.3) */}
+        <div 
+          className="w-3.5 h-3.5 rounded-full border border-border-default shadow-inner shrink-0"
+          style={{ backgroundColor: currentParams.color || '#ffffff' }}
+          title={`Active Swatch: ${currentParams.material ?? 'None'} (${currentParams.finish ?? 'Matte'})`}
+        />
+        <span className="text-text-secondary text-size-micro uppercase font-medium md:inline hidden">
+          {currentParams.material}
         </span>
+        
+        <span className="text-text-tertiary">|</span>
         {hasWarning ? (
           <div 
+            key="warning"
             title="Active validation warning: parameter auto-clamped to satisfy limits"
-            className="w-2.5 h-2.5 rounded-full bg-warning animate-pulse shadow-[0_0_8px_var(--warning)]"
+            className="w-2.5 h-2.5 rounded-full bg-warning animate-state-pulse shadow-[0_0_8px_var(--warning)]"
           />
         ) : (
           <div 
+            key="valid"
             title="System state valid: all inputs satisfy geometry rules"
-            className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+            className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-state-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"
           />
         )}
       </div>

@@ -134,12 +134,10 @@ function CameraController({ controlsRef }: { controlsRef: React.RefObject<any> }
 
     if (isAnimating.current) {
       const elapsed = performance.now() - animStartTime.current;
-      const progress = Math.min(1, elapsed / 350); // Easing over 350ms (Section 6)
+      const progress = Math.min(1, elapsed / 250); // Snappy ease-out over 250ms (Section 19.2)
 
-      // Cubic ease-in-out
-      const t = progress < 0.5 
-        ? 4 * progress * progress * progress 
-        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      // Cubic ease-out curve (confident, snappy feedback)
+      const t = 1 - Math.pow(1 - progress, 3);
 
       camera.position.lerpVectors(startPos.current, targetPos.current, t);
       controls.target.lerpVectors(startLookAt.current, targetLookAt.current, t);
@@ -188,7 +186,7 @@ export default function Viewport() {
   const groupRef = useRef<THREE.Group>(null);
 
   return (
-    <main className="flex-1 h-full bg-viewport relative overflow-hidden flex items-center justify-center">
+    <main className="flex-1 h-full bg-gradient-to-b from-[#141724] via-[#090a0f] to-[#050608] relative overflow-hidden flex items-center justify-center">
       <Canvas 
         camera={{ position: [0, 1.2, 1.8], fov: 45 }}
         gl={{ 
@@ -200,7 +198,7 @@ export default function Viewport() {
           setSelection({ type: 'object', id: selectedObjectType });
         }}
       >
-        <color attach="background" args={['#08090c']} />
+        {/* Transparent canvas background allows parent CSS multi-stop gradient to show through (Section 19.2) */}
         
         {/* Orbit Camera Controls with damped inertia (Section 6) */}
         <OrbitControls 

@@ -56,6 +56,18 @@ export default function Toolbar() {
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
+  const [sweepActive, setSweepActive] = useState(false);
+  const prevObjectTypeRef = useRef(selectedObjectType);
+
+  useEffect(() => {
+    if (prevObjectTypeRef.current !== selectedObjectType) {
+      prevObjectTypeRef.current = selectedObjectType;
+      setSweepActive(true);
+      const timer = setTimeout(() => setSweepActive(false), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedObjectType]);
+
   useEffect(() => {
     setWidth(window.innerWidth);
     const handleResize = () => setWidth(window.innerWidth);
@@ -168,7 +180,7 @@ export default function Toolbar() {
   };
 
   return (
-    <header className="h-[56px] w-full bg-surface-0 border-b border-border-strong px-4 flex items-center justify-between text-text-primary select-none z-50 relative">
+    <header className="h-[56px] w-full bg-gradient-to-b from-[#141724] to-[#0f111a] border-b border-border-strong px-4 flex items-center justify-between text-text-primary select-none z-50 relative">
       {/* Left: Brand and Object Selection dropdown */}
       <div className="flex items-center gap-4 h-full">
         <span className="font-mono font-bold text-size-header tracking-wider text-text-primary">
@@ -188,8 +200,11 @@ export default function Toolbar() {
             aria-controls="object-select-listbox"
             onClick={toggleDropdown}
             onKeyDown={handleKeyDown}
-            className="flex items-center gap-3 px-4 h-8 rounded-full bg-surface-2 border border-border-strong hover:bg-surface-3 transition-colors duration-150 text-size-body font-medium text-text-primary cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-surface-0"
+            className="flex items-center gap-3 px-4 h-8 rounded-full bg-surface-2 border border-border-strong hover:bg-surface-3 transition-colors duration-150 text-size-body font-medium text-text-primary cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-surface-0 relative overflow-hidden"
           >
+            {sweepActive && (
+              <span className="absolute inset-0 bg-gradient-to-r from-accent/0 via-accent/25 to-accent/0 animate-sweep pointer-events-none" />
+            )}
             <ActiveIcon className="w-4 h-4 text-text-accent" />
             <span>{activeModule.label}</span>
             <ChevronDown className={`w-3.5 h-3.5 text-text-tertiary transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
@@ -280,82 +295,96 @@ export default function Toolbar() {
         )}
       </div>
 
-      {/* Middle: Viewport controls (Section 3 & 4 & 6) */}
-      <div className="flex items-center gap-1.5">
-        {/* Frame Selection */}
-        <button 
-          onClick={() => useStore.getState().triggerFrameSelected()}
-          aria-label="Frame Selection"
-          title="Frame Selected Element"
-          className="w-8 h-8 rounded-sm hover:bg-surface-2 flex items-center justify-center border border-transparent hover:border-border-default text-text-secondary hover:text-text-primary cursor-pointer transition-colors duration-150"
-        >
-          <Scan className="w-4 h-4" />
-        </button>
-        {/* Reset View */}
-        <button 
-          onClick={() => useStore.getState().triggerResetView()}
-          aria-label="Reset View"
-          title="Reset Camera Position"
-          className="w-8 h-8 rounded-sm hover:bg-surface-2 flex items-center justify-center border border-transparent hover:border-border-default text-text-secondary hover:text-text-primary cursor-pointer transition-colors duration-150"
-        >
-          <RefreshCcw className="w-4 h-4" />
-        </button>
-        
-        <div className="w-[1px] h-4 bg-border-subtle mx-1" />
-        
-        {/* Grid Toggle */}
-        <button 
-          onClick={() => useStore.getState().toggleGrid()}
-          aria-label="Grid Toggle"
-          title="Toggle Grid Helper"
-          className={`w-8 h-8 rounded-sm flex items-center justify-center border transition-all duration-150 cursor-pointer ${
-            useStore((state) => state.gridEnabled)
-              ? 'bg-surface-2 border-border-strong text-text-accent' 
-              : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-surface-2'
-          }`}
-        >
-          <Grid3x3 className="w-4 h-4" />
-        </button>
-
-        {/* Shading Mode Segmented Control (Solid / Wireframe) */}
-        <div className="flex items-center bg-surface-2 border border-border-default rounded-sm p-0.5 h-8 gap-0.5">
-          <button
-            onClick={() => useStore.getState().setShadingMode('solid')}
-            title="Solid shading mode"
-            className={`px-2 h-full rounded-sm flex items-center justify-center text-size-micro uppercase font-bold tracking-wider transition-colors cursor-pointer ${
-              useStore((state) => state.shadingMode) === 'solid'
-                ? 'bg-accent text-text-on-accent'
-                : 'text-text-secondary hover:text-text-primary'
-            }`}
+      {/* Middle: Viewport controls (Section 3 & 4 & 6 & Section 19.3) */}
+      <div className="flex items-center gap-4">
+        {/* Navigation/Viewing Cluster (Section 19.3) */}
+        <div className="flex items-center bg-surface-2 border border-border-default rounded-sm p-0.5 h-8 gap-0.5 shadow-sm">
+          {/* Select Cursor */}
+          <button 
+            aria-label="Select Tool"
+            title="Selection Mode (Default)"
+            className="w-8 h-8 rounded-sm bg-surface-3 text-text-accent flex items-center justify-center cursor-default"
           >
-            Solid
+            <MousePointer2 className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => useStore.getState().setShadingMode('wireframe')}
-            title="Wireframe shading mode"
-            className={`px-2 h-full rounded-sm flex items-center justify-center text-size-micro uppercase font-bold tracking-wider transition-colors cursor-pointer ${
-              useStore((state) => state.shadingMode) === 'wireframe'
-                ? 'bg-accent text-text-on-accent'
-                : 'text-text-secondary hover:text-text-primary'
-            }`}
+          
+          {/* Frame Selection */}
+          <button 
+            onClick={() => useStore.getState().triggerFrameSelected()}
+            aria-label="Frame Selection"
+            title="Frame Selected Element"
+            className="w-8 h-8 rounded-sm hover:bg-surface-3 flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer transition-colors duration-150"
           >
-            Wire
+            <Scan className="w-4 h-4" />
+          </button>
+          
+          {/* Reset View */}
+          <button 
+            onClick={() => useStore.getState().triggerResetView()}
+            aria-label="Reset View"
+            title="Reset Camera Position"
+            className="w-8 h-8 rounded-sm hover:bg-surface-3 flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer transition-colors duration-150"
+          >
+            <RefreshCcw className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Bounding Box Toggle */}
-        <button 
-          onClick={() => useStore.getState().toggleBoundingBox()}
-          aria-label="Bounding Box"
-          title="Toggle Bounding Box Helper"
-          className={`w-8 h-8 rounded-sm flex items-center justify-center border transition-all duration-150 cursor-pointer ${
-            useStore((state) => state.boundingBoxEnabled)
-              ? 'bg-surface-2 border-border-strong text-text-accent' 
-              : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-surface-2'
-          }`}
-        >
-          <BoxSelect className="w-4 h-4" />
-        </button>
+        {/* Viewport Helpers Cluster (Section 19.3) */}
+        <div className="flex items-center bg-surface-2 border border-border-default rounded-sm p-0.5 h-8 gap-0.5 shadow-sm">
+          {/* Grid Toggle */}
+          <button 
+            onClick={() => useStore.getState().toggleGrid()}
+            aria-label="Grid Toggle"
+            title="Toggle Grid Helper"
+            className={`w-8 h-8 rounded-sm flex items-center justify-center transition-colors duration-150 cursor-pointer ${
+              useStore((state) => state.gridEnabled)
+                ? 'bg-surface-3 text-text-accent' 
+                : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-surface-3'
+            }`}
+          >
+            <Grid3x3 className="w-4 h-4" />
+          </button>
+
+          {/* Shading Mode (Solid / Wire) */}
+          <div className="flex items-center bg-surface-3 border border-border-subtle rounded-sm p-0.5 h-7 gap-0.5">
+            <button
+              onClick={() => useStore.getState().setShadingMode('solid')}
+              title="Solid shading mode"
+              className={`px-2 h-full rounded-sm flex items-center justify-center text-size-micro uppercase font-bold tracking-wider transition-colors cursor-pointer ${
+                useStore((state) => state.shadingMode) === 'solid'
+                  ? 'bg-accent text-text-on-accent'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              Solid
+            </button>
+            <button
+              onClick={() => useStore.getState().setShadingMode('wireframe')}
+              title="Wireframe shading mode"
+              className={`px-2 h-full rounded-sm flex items-center justify-center text-size-micro uppercase font-bold tracking-wider transition-colors cursor-pointer ${
+                useStore((state) => state.shadingMode) === 'wireframe'
+                  ? 'bg-accent text-text-on-accent'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              Wire
+            </button>
+          </div>
+
+          {/* Bounding Box Toggle */}
+          <button 
+            onClick={() => useStore.getState().toggleBoundingBox()}
+            aria-label="Bounding Box"
+            title="Toggle Bounding Box Helper"
+            className={`w-8 h-8 rounded-sm flex items-center justify-center transition-colors duration-150 cursor-pointer ${
+              useStore((state) => state.boundingBoxEnabled)
+                ? 'bg-surface-3 text-text-accent' 
+                : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-surface-3'
+            }`}
+          >
+            <BoxSelect className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Right: Reset & Randomize actions (Section 3) */}
