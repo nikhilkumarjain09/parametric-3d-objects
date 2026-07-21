@@ -242,42 +242,79 @@ export default function Toolbar() {
         </div>
       </div>
 
-      {/* Middle: Viewport controls (Section 3 placeholder) */}
+      {/* Middle: Viewport controls (Section 3 & 4 & 6) */}
       <div className="flex items-center gap-1.5">
+        {/* Frame Selection */}
         <button 
-          aria-label="Pointer Tool"
-          className="w-8 h-8 rounded-sm hover:bg-surface-2 flex items-center justify-center border border-transparent hover:border-border-default text-text-secondary cursor-pointer"
-        >
-          <MousePointer2 className="w-4 h-4" />
-        </button>
-        <button 
+          onClick={() => useStore.getState().triggerFrameSelected()}
           aria-label="Frame Selection"
-          className="w-8 h-8 rounded-sm hover:bg-surface-2 flex items-center justify-center border border-transparent hover:border-border-default text-text-secondary cursor-pointer"
+          title="Frame Selected Element"
+          className="w-8 h-8 rounded-sm hover:bg-surface-2 flex items-center justify-center border border-transparent hover:border-border-default text-text-secondary hover:text-text-primary cursor-pointer transition-colors duration-150"
         >
           <Scan className="w-4 h-4" />
         </button>
+        {/* Reset View */}
         <button 
+          onClick={() => useStore.getState().triggerResetView()}
           aria-label="Reset View"
-          className="w-8 h-8 rounded-sm hover:bg-surface-2 flex items-center justify-center border border-transparent hover:border-border-default text-text-secondary cursor-pointer"
+          title="Reset Camera Position"
+          className="w-8 h-8 rounded-sm hover:bg-surface-2 flex items-center justify-center border border-transparent hover:border-border-default text-text-secondary hover:text-text-primary cursor-pointer transition-colors duration-150"
         >
           <RefreshCcw className="w-4 h-4" />
         </button>
+        
         <div className="w-[1px] h-4 bg-border-subtle mx-1" />
+        
+        {/* Grid Toggle */}
         <button 
+          onClick={() => useStore.getState().toggleGrid()}
           aria-label="Grid Toggle"
-          className="w-8 h-8 rounded-sm bg-surface-2 border border-border-strong flex items-center justify-center text-text-accent cursor-pointer"
+          title="Toggle Grid Helper"
+          className={`w-8 h-8 rounded-sm flex items-center justify-center border transition-all duration-150 cursor-pointer ${
+            useStore((state) => state.gridEnabled)
+              ? 'bg-surface-2 border-border-strong text-text-accent' 
+              : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-surface-2'
+          }`}
         >
           <Grid3x3 className="w-4 h-4" />
         </button>
+
+        {/* Shading Mode Segmented Control (Solid / Wireframe) */}
+        <div className="flex items-center bg-surface-2 border border-border-default rounded-sm p-0.5 h-8 gap-0.5">
+          <button
+            onClick={() => useStore.getState().setShadingMode('solid')}
+            title="Solid shading mode"
+            className={`px-2 h-full rounded-sm flex items-center justify-center text-size-micro uppercase font-bold tracking-wider transition-colors cursor-pointer ${
+              useStore((state) => state.shadingMode) === 'solid'
+                ? 'bg-accent text-text-on-accent'
+                : 'text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            Solid
+          </button>
+          <button
+            onClick={() => useStore.getState().setShadingMode('wireframe')}
+            title="Wireframe shading mode"
+            className={`px-2 h-full rounded-sm flex items-center justify-center text-size-micro uppercase font-bold tracking-wider transition-colors cursor-pointer ${
+              useStore((state) => state.shadingMode) === 'wireframe'
+                ? 'bg-accent text-text-on-accent'
+                : 'text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            Wire
+          </button>
+        </div>
+
+        {/* Bounding Box Toggle */}
         <button 
-          aria-label="Display Mode"
-          className="w-8 h-8 rounded-sm hover:bg-surface-2 flex items-center justify-center border border-transparent hover:border-border-default text-text-secondary cursor-pointer"
-        >
-          <Box className="w-4 h-4" />
-        </button>
-        <button 
+          onClick={() => useStore.getState().toggleBoundingBox()}
           aria-label="Bounding Box"
-          className="w-8 h-8 rounded-sm hover:bg-surface-2 flex items-center justify-center border border-transparent hover:border-border-default text-text-secondary cursor-pointer"
+          title="Toggle Bounding Box Helper"
+          className={`w-8 h-8 rounded-sm flex items-center justify-center border transition-all duration-150 cursor-pointer ${
+            useStore((state) => state.boundingBoxEnabled)
+              ? 'bg-surface-2 border-border-strong text-text-accent' 
+              : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-surface-2'
+          }`}
         >
           <BoxSelect className="w-4 h-4" />
         </button>

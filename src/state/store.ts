@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { objectRegistry, ObjectDefinitionModule } from '../objects';
+import { objectRegistry } from '../objects';
 
 export interface SelectionScope {
   type: 'object' | 'component';
@@ -13,6 +13,13 @@ interface AppState {
   activePresetId: string | null;
   warningMessages: Record<string, string>;
 
+  // Viewport Settings (Section 4 & 6)
+  gridEnabled: boolean;
+  boundingBoxEnabled: boolean;
+  shadingMode: 'solid' | 'wireframe';
+  cameraAction: 'none' | 'frame-selected' | 'reset-view';
+  cameraActionId: number; // Incremented to notify canvas ref changes
+
   // Actions
   setSelectedObjectType: (type: string) => void;
   updateParam: (paramId: string, value: any) => void;
@@ -21,6 +28,14 @@ interface AppState {
   resetObject: () => void;
   randomizeObject: () => void;
   clearWarning: (paramId: string) => void;
+
+  // Viewport Actions
+  toggleGrid: () => void;
+  toggleBoundingBox: () => void;
+  setShadingMode: (mode: 'solid' | 'wireframe') => void;
+  triggerFrameSelected: () => void;
+  triggerResetView: () => void;
+  clearCameraAction: () => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -30,17 +45,26 @@ export const useStore = create<AppState>((set, get) => ({
   activePresetId: null,
   warningMessages: {},
 
+  // Default Viewport Settings (ASM-019)
+  gridEnabled: true,
+  boundingBoxEnabled: false,
+  shadingMode: 'solid',
+  cameraAction: 'none',
+  cameraActionId: 0,
+
   setSelectedObjectType: (type) => {
     const module = objectRegistry[type];
     if (!module) return;
 
-    // Reset selection scope to Object-level (REQ-SEL-003 step 6)
+    // Reset selection scope to Object-level, reset warnings, trigger default auto-frame on first load
     set({
       selectedObjectType: type,
       currentParams: { ...module.defaultParams },
       selectionScope: { type: 'object', id: type },
       activePresetId: null,
       warningMessages: {},
+      cameraAction: 'reset-view',
+      cameraActionId: get().cameraActionId + 1,
     });
   },
 
@@ -49,11 +73,11 @@ export const useStore = create<AppState>((set, get) => ({
     const module = objectRegistry[selectedObjectType];
     if (!module) return;
 
-    // Merge new value and apply constraints (REQ-VALID-001/003)
+    // Merge new value and apply constraints
     const newParams = { ...currentParams, [paramId]: value };
     const clampedParams = module.constraints(newParams);
 
-    // Track any clamped/adjusted fields to show warnings if they changed from what was input (REQ-VALID-003/004)
+    // Track clamped fields to display floating warning tooltips
     const warnings: Record<string, string> = { ...get().warningMessages };
     if (clampedParams[paramId] !== value) {
       warnings[paramId] = `Value clamped to ${clampedParams[paramId]} due to geometry constraints`;
@@ -90,7 +114,6 @@ export const useStore = create<AppState>((set, get) => ({
     if (!module) return;
 
     if (activePresetId) {
-      // Restore to active preset's baseline (REQ-RESET-001)
       const preset = module.presets.find((p) => p.id === activePresetId);
       if (preset) {
         set({
@@ -101,7 +124,6 @@ export const useStore = create<AppState>((set, get) => ({
       }
     }
 
-    // Default factory reset
     set({
       currentParams: { ...module.defaultParams },
       activePresetId: null,
@@ -114,10 +136,36 @@ export const useStore = create<AppState>((set, get) => ({
     const module = objectRegistry[selectedObjectType];
     if (!module) return;
 
-    // Call module's randomize logic (if implemented) or use default factory defaults.
-    // For now, this is a placeholder randomize operation that maintains the object type (REQ-RAND-002)
+    const randomized: Record<string, any> = {};
+    module.paramSchema.forEach((param) => {
+      if (param.type === 'number') {
+        const min = param.min ?? 0;
+        const max = param.max ?? 100;
+        const step = param.step ?? 1;
+        const range = max - min;
+        const raw = min + Math.random() * range;
+        const stepped = Math.round(raw / step) * step;
+        randomized[param.id] = Math.max(min, Math.min(max, stepped));
+      } else if (param.type === 'enum') {
+        const options = param.options ?? [];
+        if (options.length > 0) {
+          const idx = Math.floor(Math.random() * options.length);
+          randomized[param.id] = options[idx];
+        }
+      } else if (param.type === 'boolean') {
+        randomized[param.id] = Math.random() > 0.5;
+      } else if (param.type === 'color') {
+        const colors = ['#f8fafc', '#1e293b', '#8b5a2b', '#5c4033', '#cbd5e1', '#0d9488', '#e11d48', '#f59e0b'];
+        const idx = Math.floor(Math.random() * colors.length);
+        randomized[param.id] = colors[idx];
+      }
+    });
+
+    const clamped = module.constraints(randomized);
+
     set({
-      currentParams: { ...module.defaultParams },
+      currentParams: clamped,
+      activePresetId: null,
       warningMessages: {},
     });
   },
@@ -126,5 +174,36 @@ export const useStore = create<AppState>((set, get) => ({
     const warnings = { ...get().warningMessages };
     delete warnings[paramId];
     set({ warningMessages: warnings });
+  },
+
+  // Viewport Settings actions
+  toggleGrid: () => {
+    set((state) => ({ gridEnabled: !state.gridEnabled }));
+  },
+
+  toggleBoundingBox: () => {
+    set((state) => ({ boundingBoxEnabled: !state.boundingBoxEnabled }));
+  },
+
+  setShadingMode: (mode) => {
+    set({ shadingMode: mode });
+  },
+
+  triggerFrameSelected: () => {
+    set((state) => ({
+      cameraAction: 'frame-selected',
+      cameraActionId: state.cameraActionId + 1,
+    }));
+  },
+
+  triggerResetView: () => {
+    set((state) => ({
+      cameraAction: 'reset-view',
+      cameraActionId: state.cameraActionId + 1,
+    }));
+  },
+
+  clearCameraAction: () => {
+    set({ cameraAction: 'none' });
   },
 }));
