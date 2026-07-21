@@ -10,17 +10,27 @@ export default function Viewport() {
   const currentParams = useStore((state) => state.currentParams);
 
   const activeModule = objectRegistry[selectedObjectType];
-  // Generically derive meshes based on the active Object Module (REQ-EXT-002)
   const meshes = activeModule ? activeModule.deriveGeometry(currentParams) : [];
 
   return (
     <main className="flex-1 h-full bg-viewport relative overflow-hidden flex items-center justify-center">
-      <Canvas camera={{ position: [0, 2, 3], fov: 45 }}>
+      <Canvas camera={{ position: [0, 1.5, 2.5], fov: 45 }}>
         <color attach="background" args={['#08090c']} />
-        <ambientLight intensity={1.5} />
-        <directionalLight position={[10, 10, 5]} intensity={1.5} />
-        <gridHelper args={[10, 10, '#2d3450', '#1f2438']} />
         
+        {/* Soft three-point lighting setup per design settings Section 6.2 */}
+        <ambientLight intensity={0.4} />
+        <pointLight position={[-10, -10, -10]} intensity={0.2} />
+        <directionalLight 
+          position={[5, 8, 5]} 
+          intensity={1.2} 
+          castShadow 
+          shadow-mapSize-width={1024} 
+          shadow-mapSize-height={1024}
+        />
+        
+        {/* Ground spatial grid helper */}
+        <gridHelper args={[10, 100, '#2d3450', '#1f2438']} position={[0, 0, 0]} />
+
         {/* Generically render meshes defined by the active Object Module */}
         {meshes.map((mesh) => (
           <mesh
@@ -30,9 +40,34 @@ export default function Viewport() {
             scale={mesh.scale || [1, 1, 1]}
           >
             {mesh.geometry.type === 'box' && (
-              <boxGeometry args={mesh.geometry.args} />
+              <boxGeometry 
+                key={mesh.id + '-' + JSON.stringify(mesh.geometry.args)} 
+                args={mesh.geometry.args} 
+              />
             )}
-            <meshStandardMaterial color={mesh.material.color || '#ffffff'} />
+            
+            {mesh.geometry.type === 'cylinder' && (
+              <cylinderGeometry 
+                key={mesh.id + '-' + JSON.stringify(mesh.geometry.args)} 
+                args={mesh.geometry.args} 
+              />
+            )}
+            
+            {mesh.geometry.type === 'extrude' && (
+              <extrudeGeometry 
+                key={mesh.id + '-' + JSON.stringify(mesh.geometry.options)} 
+                args={[mesh.geometry.shape, mesh.geometry.options]} 
+              />
+            )}
+            
+            <meshStandardMaterial
+              color={mesh.material.color || '#ffffff'}
+              roughness={mesh.material.roughness ?? 0.5}
+              metalness={mesh.material.metalness ?? 0.0}
+              transparent={mesh.material.transparent ?? false}
+              opacity={mesh.material.opacity ?? 1.0}
+              wireframe={mesh.material.wireframe ?? false}
+            />
           </mesh>
         ))}
       </Canvas>
